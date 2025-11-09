@@ -318,22 +318,32 @@ export default function TripPage() {
         },
       });
 
-      // Calculate routes for all modes
+      // Render only the route for the trip with the best safety score
       const directionsService = new window.google.maps.DirectionsService();
-      const modeColors = {
-        DRIVING: "#3B82F6", // blue
-        WALKING: "#10B981", // green
-        TRANSIT: "#EC4899", // pink
-      };
+      
+      // Find the best safety score option
+      const bestOption = tripOptions.length > 0 
+        ? tripOptions.reduce((prev, current) => 
+            current.safetyScore > prev.safetyScore ? current : prev
+          )
+        : null;
 
-      const renderRoute = (mode: string) => {
+      if (bestOption) {
+        const modeMap: { [key: string]: string } = {
+          'walking': 'WALKING',
+          'driving': 'DRIVING',
+          'public': 'TRANSIT'
+        };
+
+        const travelMode = modeMap[bestOption.mode] || 'DRIVING';
+        
         const directionsRenderer = new window.google.maps.DirectionsRenderer({
           map,
           suppressMarkers: true,
           polylineOptions: {
-            strokeColor: modeColors[mode as keyof typeof modeColors] || "#EC4899",
-            strokeWeight: 4,
-            strokeOpacity: mode === transport.toUpperCase() ? 1 : 0.5, // highlight selected mode
+            strokeColor: "#EC4899", // pink for the safest route
+            strokeWeight: 5,
+            strokeOpacity: 1,
           },
         });
 
@@ -341,31 +351,23 @@ export default function TripPage() {
           {
             origin: { lat: startLat, lng: startLon },
             destination: { lat: endLat, lng: endLon },
-            travelMode: window.google.maps.TravelMode[mode as keyof typeof window.google.maps.TravelMode],
+            travelMode: window.google.maps.TravelMode[travelMode as keyof typeof window.google.maps.TravelMode],
           },
           (result: any, status: any) => {
             const okStatus = status === "OK" || status === window.google.maps.DirectionsStatus.OK;
             if (okStatus && result) {
               directionsRenderer.setDirections(result);
-              // If this is the selected mode, fit bounds
-              if (mode === transport.toUpperCase()) {
-                const bounds = new window.google.maps.LatLngBounds();
-                result.routes[0]?.overview_path?.forEach((p: any) => bounds.extend(p));
-                map.fitBounds(bounds);
-              }
+              // Fit bounds to show the entire route
+              const bounds = new window.google.maps.LatLngBounds();
+              result.routes[0]?.overview_path?.forEach((p: any) => bounds.extend(p));
+              map.fitBounds(bounds);
             } else {
-              console.warn(`Directions request failed for ${mode}:`, status);
+              console.warn(`Directions request failed for ${travelMode}:`, status);
             }
           }
         );
-      };
-
-    // Draw all routes, selected mode last so it's on top
-    const modes = ['DRIVING', 'WALKING', 'TRANSIT'].sort(
-      (a, b) => (a === transport.toUpperCase() ? 1 : 0) - (b === transport.toUpperCase() ? 1 : 0)
-    );
-    modes.forEach(renderRoute);
-  }, [startLat, startLon, endLat, endLon, destination, transport, mapsLoaded, mapsError]);
+      }
+  }, [startLat, startLon, endLat, endLon, destination, transport, mapsLoaded, mapsError, tripOptions]);
 
   const openInGoogleMaps = () => {
     const url = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLon}&destination=${endLat},${endLon}&travelmode=${transport === 'walking' ? 'walking' : transport === 'public' ? 'transit' : 'driving'}`;
@@ -473,15 +475,31 @@ export default function TripPage() {
             </div>
 
             {/* Recommended Trip Mode */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="mb-2">
+              <div className="flex items-center justify-between ">
                 <h2 className="text-lg font-semibold text-gray-900">Recommended Trip Mode</h2>
                 <span className="text-pink-500 font-semibold">{getRecommendedMode()}</span>
               </div>
             </div>
 
-            {/* Map */}
-            {/* Optionally, you can remove the map area or keep it for context. */}
+            {/* Map - Show route for best safety score */}
+            <div className="mb-8">
+              <div 
+                ref={mapRef}
+                className="w-full h-[400px] rounded-2xl border-2 border-gray-200 overflow-hidden"
+              >
+                {mapInitError && (
+                  <div className="flex items-center justify-center h-full bg-gray-50">
+                    <p className="text-red-500 text-sm px-4 text-center">{mapInitError}</p>
+                  </div>
+                )}
+                {mapsError && (
+                  <div className="flex items-center justify-center h-full bg-gray-50">
+                    <p className="text-red-500 text-sm px-4 text-center">{mapsError}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </>
         )}
       </main>
