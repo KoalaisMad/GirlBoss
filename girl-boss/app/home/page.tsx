@@ -576,7 +576,7 @@ export default function Home() {
                       {location.distance !== null &&
                         location.distance !== undefined && (
                           <div
-                            className={`text-xs font-medium px-2 py-1 rounded-full ${
+                            className={`text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0 ${
                               location.distance <= 50
                                 ? "bg-green-100 text-green-700"
                                 : "bg-gray-100 text-gray-600"
