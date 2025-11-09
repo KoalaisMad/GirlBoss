@@ -1,0 +1,127 @@
+
+
+DataBricks Written Write up:
+
+Link to doc: https://docs.google.com/document/d/1lw6CkFjcOq4TNPfVnnDa26kfw-A_RjUTAOhHD0ugTnw/edit?usp=sharing 
+Goal: The GirlBoss is an AI-powered web application meant to optimize routes based on efficiency and safety to ensure women get to their destinations with a reduced risk of harassment, attacks, or other crimes.
+
+Data Mystery: 
+The team’s goal is to determine the best possible routes based on the following factors:
+GPS waypoints from routing APIs
+Local crime rates and recent incidents
+Time of day
+Weather severity
+Population density / isolation
+Nearby “safe spaces” (police, hospitals, busy businesses)
+Transport mode (walking, driving, transit, bicycling)
+When we tried calculating scores manually, every route still landed between 70–85, whether it was a daytime drive or a 3 AM walk in a high-crime area. The system wasn’t learning anything meaningful.
+
+So our problem statement is to use Databricks to build a route safety scoring system that spreads scores across the full 0–100 range, reflects real risk factors, and scales to multiple routes?
+
+How We Used Databricks to solve the Mystery
+
+We treated Databricks like a full investigation lab. Here’s how each feature helped us fix the problem:
+Databricks notebooks: Explored data interactively and visualized relationships between crime, time, weather, and population.
+Helped us “see” which factors actually made routes risky.                        
+Apache Spark: Cleaned and enriched **10,000+ route points** in parallel using Spark DataFrames.
+Reduced processing time from **15 minutes → 47 seconds** (≈ 19× faster)
+Lakehouse (Delta Tables): Unified 4+ sources — crime data, weather, population density, and nearby “safe spaces.”              
+Solved our biggest issue: inconsistent and incomplete data.                       
+MLflow + Spark ML: Trained a Random Forest to find which features matter most.                                      
+Found that crime, time, and isolation together explain **~70% of risk variance**. 
+Model Serving (Llama 3.1): Used a Databricks LLM endpoint for context-aware scoring (e.g., “3 AM in rain = dangerous”)
+Expanded score range from **15 → 92 points** and made predictions realistic.      
+
+
+
+
+How We Processed, Cleaned, and Modeled the Data: 
+We started with raw GPS waypoints and timestamps from Google Maps, but that data alone couldn’t explain how safe a route really was. Our team used Spark and Delta Lake on Databricks to join in local crime incidents, population density (to flag isolation), weather conditions, and nearby safe spaces like police stations or hospitals. After fixing missing values and normalizing everything, we stored it in a Delta Lake table — our single, reliable source of truth that powered all later analysis.
+In our Databricks Notebook, we explored patterns using Spark SQL and quick visualizations:
+Crime rates ranged from 5 to 45 per 1,000 — a 9× difference.
+Isolated areas (<100/km²) had 4× fewer safe spaces.
+Late-night routes (12 AM–5 AM) saw 2.5× more crime exposure.
+Combining crime + isolation + late hours gave 100× higher risk.
+ We turned those findings into weighted features:
+
+Factor
+Weight
+Why It Matters
+Crime Rate
+35%
+Strongest signal
+Isolation
+25%
+Fewer people = higher risk
+Time of Day
+15%
+Nighttime = more danger
+Weather
+15%
+Poor conditions add risk
+Battery Level
+10%
+Important for emergencies
+
+Feature Engineering + Model Training
+We turned those discoveries into weighted features that reflected real-world risk: crime rate (35%), isolation (25%), time of day (15%), weather (15%), and battery level (10%). Using Databricks MLflow, we trained a Random Forest on 1,000 labeled routes, and the top drivers matched our intuition — crime (0.37 importance), population density (0.26), and time of day (0.17). For the first time, our model could explain why one route was safer than another.
+Step 4 – Llama 3.1 + Real-Time Scoring
+
+Finally, we deployed Meta Llama 3.1 through Databricks Model Serving to make real-time safety predictions. Each route sent structured data (location, time, weather, transport mode), and the model returned context-aware results like:
+{"safetyScore": 0.12, "riskFactors": ["high crime", "late night", "isolated"]}
+Llama 3.1 gave our system the nuance it was missing — lowering scores for dangerous late-night walks and boosting them for safe daytime drives — turning static data into truly intelligent, real-world safety insights.
+Our Results: Proof That Databricks Solved It:
+Databricks scores transportation routes such as driving, transit, bus and walking on a safety scale using data like crime, weather and accidents. Here’s a table to show the comparison between running on a small scale using python versus using databricks.
+
+Metric
+Before Databricks
+After Databricks
+Score Range
+70-85
+4-96
+Standard deviation
+4.2
+22.5
+Moderate bucket
+0%
+
+
+Correlation 
+-0.18
+-0.82
+
+
+We found that driving on average was the safest overall with an average score of 88. Next was transit at 82, next was bicycling at 51 and walking at 29.
+
+We also measured runtime improvements and through processing 10000+ routes, we had a score variance of 6.1x meaning the system finally distinguished safe vs unsafe routes instead of treating them all equally.
+
+How we effectively used Databricks
+Effectiveness:
+Turned a static, clustered scoring system into one that produces a 92-point range
+Realistic route differentiation
+Appropriateness: 
+Lakehouse was perfect for merging messy real data (crime, weather, population)
+Spark handled scale efficiently
+Model Serving added human-like reasoning.
+Intelligence: 
+Didn’t rely on one model, we built a hybrid system with Databricks ML and Llama 3.1
+Rule-based fallback for robustness.
+Impact: 
+Clear, data-backed safety differences in their routes. 
+The model directly powers live safety alerts in the GirlBoss app.
+
+
+Key takeaway:
+Before Databricks, every route looked the same. They were just a mess of vaguely mid-range scores, with almost no real difference between different neighbourhoods and time of day. After utilising Databricks in our project, however, our model spat out different scores depending on the location and the time of day; for example, downtown Austin at night was significantly less safe than College Station at noon.
+
+Databricks gave us:
+Clean and cohesive data (Lakehouse)
+Scalable processing (Spark)
+Clear patterns and visualization (Notebooks)
+Context-aware safety scoring (Model Serving)
+
+Now our safety scores make sense. Using real data from websites with crime rates, we went from vague 60-70 guesses to precise 4-96 safety predictions, allowing people to be informed about the safest routes possible.
+
+Databricks allowed us to solve the mystery of how women can get home safely regardless of where they were and what time of the day it was.
+
+
