@@ -4,7 +4,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectMongoDB } from './config/db';
+import { connectToMongoDB } from './config/db';
 import planningRoutes from './routes/planningRoutes';
 import yappingRoutes from './routes/yappingRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
@@ -61,7 +61,7 @@ const startServer = async () => {
     // try to connect to MongoDB but keep going if it fails
     // (helpful for testing without DB)
     try {
-      await connectMongoDB();
+      await connectToMongoDB();
       console.log('MongoDB connected');
     } catch (dbError) {
       console.warn('MongoDB not connected - some features will use mock data');

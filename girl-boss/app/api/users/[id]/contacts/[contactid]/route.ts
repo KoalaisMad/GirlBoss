@@ -1,28 +1,45 @@
-import { connectToMongoDB } from "@/backend/src/config/db";
-import User from "@/models/User";
-import { Types } from "mongoose";
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function PATCH(req: Request, { params }: { params: { id: string; contactId: string } }) {
-  await connectToMongoDB();
-  const update = await req.json();
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 
-  const user = await User.findOneAndUpdate(
-    { _id: params.id, "contacts._id": new Types.ObjectId(params.contactId) },
-    { $set: Object.fromEntries(Object.entries(update).map(([k, v]) => [`contacts.$.${k}`, v])) },
-    { new: true }
-  );
-  if (!user) return new Response("Not found", { status: 404 });
-  const updated = user.contacts.id(params.contactId);
-  return Response.json(updated);
+// PATCH /api/users/:id/contacts/:contactid
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string; contactid: string } }
+) {
+  try {
+    const body = await req.json();
+    const response = await fetch(
+      `${BACKEND_URL}/api/users/${params.id}/contacts/${params.contactid}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }
+    );
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error('Update contact error:', error);
+    return NextResponse.json({ error: 'Failed to update contact' }, { status: 500 });
+  }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string; contactId: string } }) {
-  await connectToMongoDB();
-  const user = await User.findByIdAndUpdate(
-    params.id,
-    { $pull: { contacts: { _id: params.contactId } } },
-    { new: true }
-  );
-  if (!user) return new Response("Not found", { status: 404 });
-  return new Response(null, { status: 204 });
+// DELETE /api/users/:id/contacts/:contactid
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string; contactid: string } }
+) {
+  try {
+    const response = await fetch(
+      `${BACKEND_URL}/api/users/${params.id}/contacts/${params.contactid}`,
+      { method: 'DELETE' }
+    );
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    return NextResponse.json({ error: 'Failed to delete contact' }, { status: 500 });
+  }
 }
+

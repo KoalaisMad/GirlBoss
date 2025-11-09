@@ -1,24 +1,24 @@
-import { connectToMongoDB } from "@/backend/src/config/db";
-import User from "@/models/User";
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  await connectToMongoDB();
-  const user = await User.findById(params.id, { contacts: 1 });
-  if (!user) return new Response("Not found", { status: 404 });
-  return Response.json(user.contacts);
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+
+// POST /api/users/:id/contacts - Add emergency contact
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await req.json();
+    const response = await fetch(`${BACKEND_URL}/api/users/${params.id}/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error('Add contact error:', error);
+    return NextResponse.json({ error: 'Failed to add contact' }, { status: 500 });
+  }
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  await connectToMongoDB();
-  const { name, phone } = await req.json();
-  if (!name || !phone)
-    return new Response(JSON.stringify({ error: "name and phone required" }), { status: 400 });
-
-  const user = await User.findByIdAndUpdate(
-    params.id,
-    { $push: { contacts: { name, phone } } },
-    { new: true, runValidators: true, projection: { contacts: 1 } }
-  );
-  if (!user) return new Response("Not found", { status: 404 });
-  return Response.json(user.contacts);
-}

@@ -24,7 +24,6 @@ export interface User {
 export interface EmergencyContact {
   name: string;
   phone: string;
-  relationship: string;
 }
 
 export const createUser = async (userData: Partial<User>): Promise<User> => {
@@ -33,7 +32,7 @@ export const createUser = async (userData: Partial<User>): Promise<User> => {
   
   const newUser: User = {
     name: userData.name || '',
-    email: userData.email || '',
+    email: (userData.email || '').toLowerCase().trim(), // Normalize email
     phone: userData.phone,
     emergencyContacts: userData.emergencyContacts || [],
     preferences: {
@@ -57,7 +56,9 @@ export const getUserById = async (userId: string): Promise<User | null> => {
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   const db = getDB();
   const users = db.collection<User>('users');
-  return users.findOne({ email });
+  // Normalize email for consistent lookup
+  const normalizedEmail = email.toLowerCase().trim();
+  return users.findOne({ email: normalizedEmail });
 };
 
 export const updateUser = async (userId: string, updates: Partial<User>): Promise<User | null> => {

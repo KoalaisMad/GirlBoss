@@ -1,6 +1,3 @@
-/**
- * 📊 GET PLACE SAFETY HISTORY TOOL
- */
 
 import { getLocationSafetyHistory } from '../../services/snowflakeService';
 
