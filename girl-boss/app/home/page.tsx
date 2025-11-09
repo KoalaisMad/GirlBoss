@@ -20,8 +20,15 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import NavigationMenu from "../components/Navigation";
-import { upsertUser } from "@/lib/contact"; //add the user here
+import { getUserByEmail } from "@/lib/contact";
 
 interface Location {
   name: string;
@@ -29,6 +36,12 @@ interface Location {
   lat?: number;
   lon?: number;
   distance?: number | null;
+}
+
+interface EmergencyContact {
+  _id?: string;
+  name: string;
+  phone: string;
 }
 
 export default function Home() {
@@ -61,6 +74,11 @@ export default function Home() {
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Emergency alert states
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
 
   
 
@@ -364,6 +382,83 @@ export default function Home() {
     }
   };
 
+  // Emergency alert handlers
+  const handleEmergencyButtonClick = () => {
+    if (!currentLocation) {
+      alert("Please enable location services to send emergency alerts");
+      return;
+    }
+    setShowConfirmDialog(true);
+  };
+
+  const sendEmergencyAlert = async () => {
+    if (!currentLocation || !userEmail) {
+      alert("Unable to send alert. Please try again.");
+      return;
+    }
+
+    setIsSendingAlert(true);
+    setShowConfirmDialog(false);
+
+    try {
+      // Get user's emergency contacts from database
+      console.log("📞 Fetching emergency contacts for:", userEmail);
+      const userData = await getUserByEmail(userEmail);
+      
+      if (!userData || !userData.emergencyContacts || userData.emergencyContacts.length === 0) {
+        alert("No emergency contacts found. Please add contacts in Settings.");
+        setIsSendingAlert(false);
+        return;
+      }
+
+      console.log("✅ Found", userData.emergencyContacts.length, "emergency contacts");
+
+      // Create Google Maps link
+      const mapsLink = `https://maps.google.com/?q=${currentLocation.lat},${currentLocation.lon}`;
+      const timestamp = new Date().toLocaleString();
+      const message = `EMERGENCY ALERT from ${userName}!\n\nI feel unsafe! My current location:\n${mapsLink}\n\nTime: ${timestamp}\n\nPlease check on me.`;
+
+      // Send SMS to each emergency contact
+      const sendPromises = userData.emergencyContacts.map(async (contact: EmergencyContact) => {
+        try {
+          console.log("📤 Sending SMS to:", contact.name, contact.phone);
+          const response = await fetch("/api/send-sms", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: contact.phone,
+              message: message,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to send to ${contact.name}`);
+          }
+
+          const result = await response.json();
+          console.log("✅ SMS sent to", contact.name, "- SID:", result.sid);
+          return { success: true, contact: contact.name };
+        } catch (error) {
+          console.error("❌ Failed to send to", contact.name, error);
+          return { success: false, contact: contact.name, error };
+        }
+      });
+
+      const results = await Promise.all(sendPromises);
+      const successCount = results.filter(r => r.success).length;
+
+      console.log(`✅ Successfully sent ${successCount}/${userData.emergencyContacts.length} alerts`);
+
+      setIsSendingAlert(false);
+      setShowSuccessDialog(true);
+
+    } catch (error) {
+      console.error("❌ Emergency alert error:", error);
+      alert("Failed to send emergency alert. Please try again.");
+      setIsSendingAlert(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <NavigationMenu isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
@@ -574,11 +669,76 @@ export default function Home() {
         {/* Emergency Section */}
         <div className="pb-12">
           <h2 className="text-lg font-semibold mb-4">Feeling Unsafe?</h2>
-          <Button className="w-full py-2 bg-red-500 text-white hover:bg-red-600 shadow-lg">
-            <AlertTriangle className="w-5 h-5 mr-2" />
-            Notify Emergency Contact!
+          <Button 
+            onClick={handleEmergencyButtonClick}
+            disabled={isSendingAlert || !currentLocation}
+            className="w-full py-2 bg-red-500 text-white hover:bg-red-600 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSendingAlert ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Sending Alert...
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-5 h-5 mr-2" />
+                Notify Emergency Contact!
+              </>
+            )}
           </Button>
         </div>
+
+        {/* Confirmation Dialog */}
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+                Confirm Emergency Alert
+              </DialogTitle>
+              <DialogDescription className="text-base pt-2">
+                This will send an emergency alert with your current location to all your emergency contacts. Continue?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-2 mt-4">
+              <Button
+                onClick={() => setShowConfirmDialog(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={sendEmergencyAlert}
+                className="flex-1 bg-red-500 hover:bg-red-600"
+              >
+                Send Alert
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Success Dialog */}
+        <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                ✅ Alert Sent Successfully!
+              </DialogTitle>
+              <DialogDescription className="text-base pt-2">
+                Your emergency alert has been sent to all your emergency contacts with your current location.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button
+                onClick={() => setShowSuccessDialog(false)}
+                className="bg-pink-500 hover:bg-pink-600 w-full"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
