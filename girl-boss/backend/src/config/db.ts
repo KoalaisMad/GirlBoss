@@ -77,8 +77,6 @@ import { MongoClient, Db } from 'mongodb';
 
 let db: Db | null = null;
 let client: MongoClient | null = null;
-let db: Db | null = null;
-let client: MongoClient | null = null;
 
 export const connectToMongoDB = async (): Promise<Db> => {
   if (db) {
@@ -90,33 +88,17 @@ export const connectToMongoDB = async (): Promise<Db> => {
     
     client = new MongoClient(uri);
     await client.connect();
-    client = new MongoClient(uri);
-    await client.connect();
     
     db = client.db();
-    console.log('Connected to MongoDB');
-    db = client.db();
-    console.log('Connected to MongoDB');
+    console.log('✅ Connected to MongoDB');
     
     return db;
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    throw error;
-  }
-};
-    return db;
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error);
     throw error;
   }
 };
 
-export const getDB = (): Db => {
-  if (!db) {
-    throw new Error('Database not initialized. Call connectMongoDB first.');
-  }
-  return db;
-};
 export const getDB = (): Db => {
   if (!db) {
     throw new Error('Database not initialized. Call connectMongoDB first.');
