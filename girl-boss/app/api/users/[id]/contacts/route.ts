@@ -5,11 +5,12 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 // POST /api/users/:id/contacts - Add emergency contact
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await req.json();
-    const response = await fetch(`${BACKEND_URL}/api/users/${params.id}/contacts`, {
+    const response = await fetch(`${BACKEND_URL}/api/users/${id}/contacts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

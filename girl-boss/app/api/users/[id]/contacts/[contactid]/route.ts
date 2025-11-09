@@ -5,12 +5,13 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
 // PATCH /api/users/:id/contacts/:contactid
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; contactid: string } }
+  { params }: { params: Promise<{ id: string; contactid: string }> }
 ) {
   try {
+    const { id, contactid } = await params;
     const body = await req.json();
     const response = await fetch(
-      `${BACKEND_URL}/api/users/${params.id}/contacts/${params.contactid}`,
+      `${BACKEND_URL}/api/users/${id}/contacts/${contactid}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -28,11 +29,12 @@ export async function PATCH(
 // DELETE /api/users/:id/contacts/:contactid
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; contactid: string } }
+  { params }: { params: Promise<{ id: string; contactid: string }> }
 ) {
   try {
+    const { id, contactid } = await params;
     const response = await fetch(
-      `${BACKEND_URL}/api/users/${params.id}/contacts/${params.contactid}`,
+      `${BACKEND_URL}/api/users/${id}/contacts/${contactid}`,
       { method: 'DELETE' }
     );
     const data = await response.json();

@@ -4,7 +4,7 @@
 
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Menu, User, Car, Bus } from "lucide-react";
 import Image from "next/image";
@@ -105,7 +105,7 @@ function useLoadGoogleMaps() {
   return { loaded, error } as const;
 }
 
-export default function TripPage() {
+function TripPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
@@ -163,7 +163,7 @@ export default function TripPage() {
               const routeData = await routeResponse.json();
 
               // Extract waypoints from the route for detailed safety analysis
-              let waypoints: Array<{lat: number, lon: number}> = [];
+              let waypoints: Array<{latitude: number, longitude: number}> = [];
               if (routeResponse.ok && routeData.routes && routeData.routes[0]?.legs) {
                 const leg = routeData.routes[0].legs[0];
                 if (leg.steps && leg.steps.length > 0) {
@@ -172,13 +172,15 @@ export default function TripPage() {
                   leg.steps.forEach((step: any, idx: number) => {
                     if (idx % stepInterval === 0 && step.end_location) {
                       waypoints.push({
-                        lat: step.end_location.lat,
-                        lon: step.end_location.lng
+                        latitude: step.end_location.lat,
+                        longitude: step.end_location.lng
                       });
                     }
                   });
                 }
               }
+              
+              console.log(`Extracted ${waypoints.length} waypoints for ${mode} route`);
 
               // Fetch safety score from backend with route waypoints for Databricks analysis
               let safetyScore = 50; // default
@@ -201,10 +203,12 @@ export default function TripPage() {
                 if (safetyResponse.ok) {
                   const safetyData = await safetyResponse.json();
                   safetyScore = safetyData.score;
-                  console.log(`Safety score for ${mode}: ${safetyScore} (analyzed ${safetyData.route_segments_analyzed || 0} segments)`);
+                  console.log(`✅ Safety score for ${mode}: ${safetyScore} (analyzed ${safetyData.route_segments_analyzed || 0} segments with Databricks)`);
+                } else {
+                  console.error(`❌ Safety API error for ${mode}:`, safetyResponse.status, await safetyResponse.text());
                 }
               } catch (err) {
-                console.warn('Failed to fetch safety score, using default:', err);
+                console.error(`❌ Failed to fetch safety score for ${mode}:`, err);
               }
 
               return { 
@@ -504,5 +508,13 @@ export default function TripPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function TripPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <TripPageContent />
+    </Suspense>
   );
 }

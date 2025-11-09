@@ -187,10 +187,9 @@ export const predictRouteSafety = async (
   transportMode: string
 ): Promise<RiskPrediction> => {
   try {
-    // Check if Databricks credentials are configured
+    // Check if Databricks credentials are configured - REQUIRED, NO FALLBACK
     if (!process.env.DATABRICKS_MODEL_URL || !process.env.DATABRICKS_TOKEN) {
-      console.warn('Databricks not configured, using fallback logic');
-      return getFallbackPrediction(startLat, startLon, endLat, endLon, timeOfDay, transportMode);
+      throw new Error('Databricks credentials not configured. Set DATABRICKS_MODEL_URL and DATABRICKS_TOKEN in .env');
     }
 
     // Get current hour from timeOfDay
@@ -242,34 +241,58 @@ Consider: time of day, transport mode, population density, lighting, typical saf
       }
     );
 
+    console.log('✅ Databricks response received:', JSON.stringify(response.data).substring(0, 200));
+
     // Parse the LLM response
     const content = response.data.choices?.[0]?.message?.content || '';
     
-    // Extract JSON from response (might have markdown code blocks)
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
+    if (!content) {
+      throw new Error('Databricks returned empty response');
     }
     
-    const prediction = JSON.parse(jsonMatch[0]);
+    console.log('📝 Databricks content:', content.substring(0, 300));
+    
+    console.log('📝 Databricks content:', content.substring(0, 300));
+    
+    // Extract JSON from response (might have markdown code blocks or extra text)
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error(`No JSON found in Databricks response. Content: ${content.substring(0, 200)}`);
+    }
+    
+    let prediction;
+    try {
+      prediction = JSON.parse(jsonMatch[0]);
+      console.log('✅ Parsed Databricks prediction:', prediction);
+    } catch (parseError: any) {
+      throw new Error(`Failed to parse Databricks JSON response: ${parseError.message}. Content: ${jsonMatch[0].substring(0, 200)}`);
+    }
     
     // Validate and normalize the response
-    return {
+    if (typeof prediction.safetyScore !== 'number') {
+      throw new Error(`Invalid safetyScore from Databricks: ${prediction.safetyScore}`);
+    }
+    
+    const finalPrediction = {
       safetyScore: Math.min(100, Math.max(0, prediction.safetyScore || 75)),
       riskLevel: ['low', 'medium', 'high'].includes(prediction.riskLevel) 
         ? prediction.riskLevel 
-        : 'medium',
+        : (prediction.safetyScore >= 70 ? 'low' : prediction.safetyScore >= 50 ? 'medium' : 'high'),
       factors: Array.isArray(prediction.factors) 
         ? prediction.factors.slice(0, 5) 
-        : ['General safety assessment'],
-      confidence: Math.min(1, Math.max(0, prediction.confidence || 0.7))
+        : ['General safety assessment from Databricks ML'],
+      confidence: Math.min(1, Math.max(0, prediction.confidence || 0.85)) // Higher confidence for ML
     };
+    
+    console.log(`🎯 Final Databricks prediction - Score: ${finalPrediction.safetyScore}, Risk: ${finalPrediction.riskLevel}, Confidence: ${finalPrediction.confidence}`);
+    
+    return finalPrediction;
     
   } catch (error: any) {
     console.error('Databricks prediction error:', error.message || error);
     
-    // Return fallback prediction with rule-based logic
-    return getFallbackPrediction(startLat, startLon, endLat, endLon, timeOfDay, transportMode);
+    // THROW ERROR - Don't fall back, we want to know if Databricks fails
+    throw new Error(`Databricks ML prediction failed: ${error.message || error}. Check your Databricks configuration.`);
   }
 };
 
@@ -290,15 +313,38 @@ function getFallbackPredection(
   const isDusk = (hour >= 17 && hour < 20) || (hour >= 5 && hour < 7);
   const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19);
   
-  // Use location to vary base safety (urban vs rural, different neighborhoods)
-  const areaRiskFactor = Math.abs(Math.sin(startLat * 100) * Math.cos(startLon * 100)); // 0-1
+  // ENHANCED: Use BOTH start and end location to create MORE variation
+  // Combine coordinates to create unique area signatures
+  const startSeed = Math.abs(Math.sin(startLat * 137.5) * Math.cos(startLon * 113.7)); // 0-1
+  const endSeed = Math.abs(Math.sin(endLat * 149.3) * Math.cos(endLon * 127.1)); // 0-1
+  const routeSeed = Math.abs(Math.sin((startLat + endLat) * 73.2) * Math.cos((startLon + endLon) * 89.6)); // 0-1
+  
+  // Weight the seeds to create variation: 40% start, 40% end, 20% route
+  const areaRiskFactor = 0.4 * startSeed + 0.4 * endSeed + 0.2 * routeSeed;
   const urbanScore = areaRiskFactor; // 0 = rural, 1 = urban
   
-  // Start with location-dependent base score
-  // Urban areas: 70-85 during day, 50-65 at night
-  // Rural areas: 75-90 during day, 45-60 at night
-  let baseDayScore = urbanScore > 0.5 ? 70 + (urbanScore * 15) : 75 + ((1 - urbanScore) * 15);
-  let baseNightScore = urbanScore > 0.5 ? 50 + (urbanScore * 15) : 45 + ((1 - urbanScore) * 15);
+  // Start with location-dependent base score with MORE variation
+  // Urban areas: 60-90 during day, 40-70 at night (wider range)
+  // Rural areas: 65-95 during day, 35-65 at night (wider range)
+  // Add route-specific variation based on distance and direction
+  const distance = Math.sqrt(
+    Math.pow((endLat - startLat) * 69, 2) + Math.pow((endLon - startLon) * 69, 2)
+  ); // Approximate miles
+  
+  // Direction affects safety (north/south/east/west can have different crime patterns)
+  const direction = Math.atan2(endLat - startLat, endLon - startLon); // radians
+  const directionFactor = (Math.sin(direction) + 1) / 2; // 0-1
+  
+  // ENHANCED base scores with MUCH more variation and lower scores for risky areas
+  // Urban areas (high urbanScore): Generally MORE dangerous - 30-70 day, 15-45 night
+  // Rural areas (low urbanScore): Generally safer - 55-85 day, 35-65 night
+  let baseDayScore = urbanScore > 0.5 
+    ? 30 + (areaRiskFactor * 40) + (directionFactor * 10) // 30-80 for urban
+    : 55 + ((1 - urbanScore) * 30) + (directionFactor * 10); // 55-95 for rural
+    
+  let baseNightScore = urbanScore > 0.5 
+    ? 15 + (areaRiskFactor * 30) + (directionFactor * 10) // 15-55 for urban at night
+    : 35 + ((1 - urbanScore) * 30) + (directionFactor * 10); // 35-75 for rural at night
   
   let safetyScore = isNight ? baseNightScore : baseDayScore;
   const factors: string[] = [];
@@ -320,19 +366,24 @@ function getFallbackPredection(
     factors.push('Rush hour - increased traffic congestion');
   }
   
-  // Transport mode adjustments based on vulnerability
+  // Transport mode adjustments based on vulnerability - INCREASED PENALTIES
   if (transportMode === 'walking') {
     if (isNight) {
-      safetyScore -= 15;
+      safetyScore -= 25; // INCREASED from 15
       factors.push('Walking at night - highly exposed, use well-lit populated routes');
     } else {
-      safetyScore -= 5;
+      safetyScore -= 8; // INCREASED from 5
       factors.push('Walking - stay aware of surroundings');
     }
     // Less urban = more risky for walking
     if (urbanScore < 0.3) {
-      safetyScore -= 10;
+      safetyScore -= 15; // INCREASED from 10
       factors.push('Walking in low-density area - limited help available');
+    }
+    // High urban = crime risk for walking
+    if (urbanScore > 0.7) {
+      safetyScore -= 12; // NEW penalty for high-crime urban areas
+      factors.push('Walking in dense urban area - higher crime exposure');
     }
   } else if (transportMode === 'driving') {
     safetyScore += 8;
@@ -342,7 +393,7 @@ function getFallbackPredection(
     }
   } else if (transportMode === 'public' || transportMode === 'transit') {
     if (isNight) {
-      safetyScore -= 8;
+      safetyScore -= 12; // INCREASED from 8
       factors.push('Late night public transit - reduced service and supervision');
     } else {
       safetyScore += 3;
@@ -350,18 +401,14 @@ function getFallbackPredection(
     }
   } else if (transportMode === 'bicycling') {
     if (isNight) {
-      safetyScore -= 12;
+      safetyScore -= 18; // INCREASED from 12
       factors.push('Bicycling at night - visibility concerns');
     } else {
-      safetyScore -= 3;
+      safetyScore -= 5; // INCREASED from 3
     }
   }
   
-  // Distance-based risk (longer exposure time)
-  const distance = Math.sqrt(
-    Math.pow((endLat - startLat) * 69, 2) + Math.pow((endLon - startLon) * 69, 2)
-  ); // Approximate miles
-  
+  // Distance-based risk (longer exposure time) - distance already calculated above
   if (distance > 10) {
     safetyScore -= 8;
     factors.push('Long distance route - extended exposure time');

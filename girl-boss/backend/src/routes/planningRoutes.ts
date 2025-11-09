@@ -121,6 +121,14 @@ router.post('/safety-score', async (req: Request, res: Response) => {
 
 // POST /api/plan/route-safety-score - Get safety score for a specific route
 router.post('/route-safety-score', async (req: Request, res: Response) => {
+  console.log('🎯 === ROUTE SAFETY SCORE REQUEST ===');
+  console.log('Transport mode:', req.body.transport_mode);
+  console.log('Coordinates:', { 
+    start: `${req.body.startLat}, ${req.body.startLon}`,
+    end: `${req.body.endLat}, ${req.body.endLon}` 
+  });
+  console.log('Waypoints count:', req.body.waypoints?.length || 0);
+  
   try {
     const { 
       startLat, 
@@ -249,6 +257,9 @@ router.post('/route-safety-score', async (req: Request, res: Response) => {
     const recommendations = safetyScoreService.getRecommendations(result);
     const safety_level = safetyScoreService.getSafetyLevel(result.total_score);
     const safety_description = safetyScoreService.getSafetyDescription(result.total_score);
+
+    console.log(`✅ FINAL SCORE: ${result.total_score} (${safety_level}) for ${transport_mode}`);
+    console.log(`   Risk breakdown:`, result.breakdown);
 
     res.json({
       score: result.total_score,

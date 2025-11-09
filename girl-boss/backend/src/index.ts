@@ -4,6 +4,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import { connectToMongoDB } from './config/db';
 import planningRoutes from './routes/planningRoutes';
 import yappingRoutes from './routes/yappingRoutes';
@@ -12,15 +13,19 @@ import userRoutes from './routes/userRoutes';
 import emergencyRoutes from './routes/emergencyRoutes';
 import tripRoutes from './routes/tripRoutes';
 
-// load env vars from .env file
-dotenv.config();
+// load env vars from .env file in parent directory
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 const app: Express = express();
 const PORT = process.env.PORT || 4000;
 
 // setup middleware - basically just CORS and JSON parsing
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001', // Next.js fallback port
+    process.env.FRONTEND_URL || ''
+  ].filter(Boolean),
   credentials: true
 }));
 app.use(express.json());

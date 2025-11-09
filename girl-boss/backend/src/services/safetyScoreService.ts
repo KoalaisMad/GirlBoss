@@ -77,13 +77,13 @@ interface SafetyScoreResult {
 }
 
 class SafetyScoreService {
-  // Base weights for risk components
+  // Base weights for risk components - USER REQUESTED: Crime 60%, Location 10%, Time 15%, Weather 3%, Battery 12%
   private readonly BASE_WEIGHTS = {
-    crime: 0.35,
-    location: 0.25,
-    time: 0.15,
-    weather: 0.15,
-    battery: 0.10,
+    crime: 0.55,     // 55% - Crime is the dominant factor (reduced slightly for battery)
+    location: 0.10,  // 10% - Location risk
+    time: 0.15,      // 15% - Time of day
+    weather: 0.03,   // 3% - Weather conditions
+    battery: 0.17,   // 17% - Battery level (INCREASED from 12%)
   };
 
   /**
@@ -92,71 +92,71 @@ class SafetyScoreService {
   private getTransportModeAdjustments(mode: 'walking' | 'driving' | 'transit' | 'bicycling' = 'walking') {
     switch (mode) {
       case 'walking':
-        // Walking: highest vulnerability to crime, time, and location
+        // Walking: highest vulnerability to crime - CRIME DOMINANT
         return {
           weights: {
-            crime: 0.40,      // +5% - more vulnerable to crime
-            location: 0.28,   // +3% - location matters more
-            time: 0.18,       // +3% - time of day is critical
-            weather: 0.10,    // -5% - less affected by weather than biking
-            battery: 0.04,    // -6% - can ask for help easier
+            crime: 0.60,      // 60% - VERY vulnerable to crime when walking
+            location: 0.12,   // 12% - location matters more
+            time: 0.18,       // 18% - time of day is critical
+            weather: 0.02,    // 2% - weather less important than safety
+            battery: 0.08,    // 8% - battery matters (INCREASED from 3%)
           },
-          crime_multiplier: 1.2,      // 20% more crime risk when walking
-          location_multiplier: 1.15,  // 15% more location risk
-          time_multiplier: 1.25,      // 25% more time risk (most vulnerable at night)
-          weather_multiplier: 0.8,
-          battery_multiplier: 0.7,
+          crime_multiplier: 1.5,      // 50% MORE crime risk when walking (INCREASED from 1.3)
+          location_multiplier: 1.3,   // 30% more location risk (INCREASED)
+          time_multiplier: 1.6,       // 60% more time risk - very vulnerable at night (INCREASED)
+          weather_multiplier: 0.7,
+          battery_multiplier: 1.0,
         };
 
       case 'bicycling':
-        // Bicycling: high vulnerability, weather matters more
+        // Bicycling: high crime vulnerability, slightly less exposed
         return {
           weights: {
-            crime: 0.32,      // -3% - faster escape than walking
-            location: 0.23,   // -2% - can navigate quickly
-            time: 0.15,       // same - still exposed
-            weather: 0.22,    // +7% - weather is critical for biking
-            battery: 0.08,    // -2% - phone important for navigation
+            crime: 0.53,      // 53% - still very vulnerable
+            location: 0.11,   // 11% - can navigate quickly
+            time: 0.16,       // 16% - still exposed at night
+            weather: 0.05,    // 5% - weather matters a bit more for biking
+            battery: 0.15,    // 15% - phone important for navigation
           },
-          crime_multiplier: 1.1,
-          location_multiplier: 1.05,
-          time_multiplier: 1.15,
-          weather_multiplier: 1.4,    // Weather affects biking heavily
-          battery_multiplier: 0.9,
+          crime_multiplier: 1.25,     // 25% more crime risk (INCREASED from 1.15)
+          location_multiplier: 1.15,  // 15% more location risk (INCREASED)
+          time_multiplier: 1.35,      // 35% more time risk (INCREASED)
+          weather_multiplier: 1.2,
+          battery_multiplier: 1.2,
         };
 
       case 'transit':
-        // Transit: safer from crime, location matters less
+        // Transit: safer from crime due to monitoring
         return {
           weights: {
-            crime: 0.25,      // -10% - public transit is monitored
-            location: 0.15,   // -10% - fixed routes
-            time: 0.20,       // +5% - late night transit can be risky
-            weather: 0.12,    // -3% - protected from weather
-            battery: 0.28,    // +18% - need phone for schedules/tickets
+            crime: 0.40,      // 40% - public transit is monitored (less crime risk)
+            location: 0.08,   // 8% - fixed routes
+            time: 0.20,       // 20% - late night transit can be risky
+            weather: 0.02,    // 2% - protected from weather
+            battery: 0.30,    // 30% - need phone for schedules/tickets
           },
-          crime_multiplier: 0.7,      // Transit is generally safer
-          location_multiplier: 0.6,   // Fixed routes, less exposure
-          time_multiplier: 1.1,       // Late night transit can be sketchy
-          weather_multiplier: 0.6,    // Protected from weather
-          battery_multiplier: 1.5,    // Battery critical for transit apps
+          crime_multiplier: 0.5,      // 50% LESS crime risk in transit (DECREASED from 0.6)
+          location_multiplier: 0.4,   // 60% less location risk (DECREASED)
+          time_multiplier: 1.3,       // 30% more time risk (late night transit) (INCREASED)
+          weather_multiplier: 0.4,
+          battery_multiplier: 2.0,
         };
 
       case 'driving':
-        // Driving: safest overall, battery matters most
+        // Driving: safest from crime, protected in vehicle
         return {
           weights: {
-            crime: 0.20,      // -15% - protected in vehicle
-            location: 0.18,   // -7% - can avoid areas easily
-            time: 0.10,       // -5% - less affected by time
-            weather: 0.18,    // +3% - weather affects driving
-            battery: 0.34,    // +24% - need phone for navigation
+            crime: 0.30,      // 30% - protected in vehicle (lowest crime weight)
+            location: 0.08,   // 8% - can avoid areas easily
+            time: 0.12,       // 12% - less affected by time
+            weather: 0.05,    // 5% - weather affects driving
+            battery: 0.45,    // 45% - need phone for navigation
           },
-          crime_multiplier: 0.5,      // Very protected from crime
-          location_multiplier: 0.7,   // Can avoid bad areas
-          time_multiplier: 0.7,       // Time matters less in a car
-          weather_multiplier: 1.2,    // Weather affects driving safety
-          battery_multiplier: 2.0,    // Battery critical - no navigation = dangerous
+          crime_multiplier: 0.3,      // 70% LESS crime risk in car (DECREASED from 0.4)
+          location_multiplier: 0.5,   // 50% less location risk (DECREASED)
+          time_multiplier: 0.6,       // 40% less time risk (DECREASED)
+          weather_multiplier: 1.3,
+          battery_multiplier: 3.0,
         };
 
       default:
@@ -275,6 +275,7 @@ class SafetyScoreService {
     
     // If we have route waypoints, calculate risk for all segments using Databricks
     if (route_waypoints && route_waypoints.length > 0) {
+      console.log(`🚀 Using Databricks ML for ${route_waypoints.length} route segments`);
       try {
         // Get Databricks predictions for each route segment
         const segmentPredictions = await Promise.all(
@@ -287,6 +288,8 @@ class SafetyScoreService {
             const timeOfDay = time ? `${time.hour}:00` : new Date().toTimeString().split(' ')[0];
             const mode = transport_mode || 'walking';
             
+            console.log(`  📍 Segment ${index + 1}: (${startLat.toFixed(4)}, ${startLon.toFixed(4)}) → (${endLat.toFixed(4)}, ${endLon.toFixed(4)}) via ${mode}`);
+            
             // Call Databricks for ML prediction
             const prediction = await predictRouteSafety(
               startLat,
@@ -297,30 +300,30 @@ class SafetyScoreService {
               mode
             );
             
+            console.log(`  ✅ Segment ${index + 1} ML score: ${prediction.safetyScore}, confidence: ${prediction.confidence}`);
+            
             // Convert safety score (0-100) to risk (0-1)
             const mlRisk = 1 - (prediction.safetyScore / 100);
             
             // Combine ML prediction with rule-based location risk
             const ruleBasedRisk = this.calculateSingleLocationRisk(waypoint);
             
-            // Weight: 60% ML prediction, 40% rule-based
-            return 0.6 * mlRisk + 0.4 * ruleBasedRisk;
+            // Weight: 90% ML prediction (we trust Databricks!), 10% rule-based as safety net
+            return 0.9 * mlRisk + 0.1 * ruleBasedRisk;
           })
         );
         
         // Average risk across all route segments
         const avg_route_risk = segmentPredictions.reduce((a, b) => a + b, 0) / segmentPredictions.length;
         
-        // Weight current location slightly higher than route average
-        risk = 0.3 * loc_risk + 0.7 * avg_route_risk;
+        // Weight: 80% Databricks ML (we trust it more now), 20% current location
+        risk = 0.2 * loc_risk + 0.8 * avg_route_risk;
         
-        console.log(`Route analysis: ${route_waypoints.length} segments analyzed with Databricks ML`);
-      } catch (error) {
-        console.error('Error using Databricks for route analysis, falling back to rule-based:', error);
-        // Fallback to rule-based calculation
-        const route_risks = route_waypoints.map(wp => this.calculateSingleLocationRisk(wp));
-        const avg_route_risk = route_risks.reduce((a, b) => a + b, 0) / route_risks.length;
-        risk = 0.4 * loc_risk + 0.6 * avg_route_risk;
+        console.log(`✅ Route ML analysis complete: ${route_waypoints.length} segments, avg risk: ${avg_route_risk.toFixed(3)}, final: ${risk.toFixed(3)}`);
+      } catch (error: any) {
+        // PROPAGATE ERROR - Don't fall back, we want to see Databricks issues
+        console.error('❌ Databricks ML prediction FAILED:', error.message);
+        throw new Error(`Databricks ML prediction failed: ${error.message}`);
       }
     } else {
       risk = loc_risk;
