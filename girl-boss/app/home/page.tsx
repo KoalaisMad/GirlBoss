@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import NavigationMenu from "../components/Navigation";
+import { upsertUser } from "@/lib/contact"; //add the user here
 
 interface Location {
   name: string;
@@ -36,6 +37,8 @@ export default function Home() {
   
   // Get first name from session, fallback to "User"
   const userName = session?.user?.name?.split(" ")[0] || "User";
+  const fullName  = session?.user?.name ?? "";  
+  const userEmail = session?.user?.email ?? ""; 
   const [userId] = useState("user-" + Math.random().toString(36).substr(2, 9)); // Generate unique user ID
   const [selectedTransport, setSelectedTransport] = useState<string | null>(
     null
@@ -58,6 +61,8 @@ export default function Home() {
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  
 
   // grab user's location when page loads
   // needed this for calculating distances to search results
