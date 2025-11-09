@@ -99,11 +99,11 @@ export default function ChatbotPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-2xl mx-auto w-full px-6 flex flex-col">
-        <h1 className="text-3xl font-bold my-6 text-center">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-8 flex flex-col pb-4">
+        <h1 className="text-4xl font-semibold pt-12 mb-2 text-center">
           <span className="text-gray-900">Chat</span>
         </h1>
-        <p className="text-center text-gray-500 text-sm mb-6">
+        <p className="text-center text-pink-400 mb-6">
           Tips and advice tailored to you
         </p>
 
@@ -150,19 +150,6 @@ export default function ChatbotPage() {
             ) : (
               <Send className="w-5 h-5" />
             )}
-          </button>
-        </div>
-
-        {/* Bottom tabs */}
-        <div className="flex justify-around items-center py-4 border-t border-gray-200">
-          <button className="text-gray-400 text-xs">
-            Any safe spaces nearby?
-          </button>
-          <button className="text-gray-400 text-xs">
-            ⚡ Pricing
-          </button>
-          <button className="text-gray-400 text-xs">
-            📊 FAQs
           </button>
         </div>
       </main>

@@ -21,7 +21,7 @@ export default function VoiceAssistantPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-300 to-pink-400 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
       
       {/* Header */}
@@ -39,16 +39,16 @@ export default function VoiceAssistantPage() {
           onClick={() => setIsNavOpen(true)}
           className="p-2 hover:bg-white/20 rounded-lg transition-colors"
         >
-          <Menu className="w-6 h-6 text-white" />
+          <Menu className="w-6 h-6" />
         </button>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6">
-        <h1 className="text-3xl font-bold mb-4 text-center text-gray-900">
+      <main className="flex-1 flex flex-col items-center pt-12 px-6">
+        <h1 className="text-4xl font-semibold mb-4 text-center text-gray-900">
           Voice Agent
         </h1>
-        <p className="text-center text-gray-700 text-sm mb-12">
+        <p className="text-center text-pink-400 mb-12">
           Tap the mic for immediate assistance
         </p>
 
@@ -56,7 +56,7 @@ export default function VoiceAssistantPage() {
         <div className="relative mb-16">
           <button
             onClick={toggleListening}
-            className="relative w-64 h-64 rounded-full bg-gradient-to-br from-white/40 to-white/60 flex items-center justify-center transition-all duration-300 shadow-2xl"
+            className="relative w-64 h-64 rounded-full border bg-gradient-to-br from-white/40 to-white/60 flex items-center justify-center transition-all duration-300 shadow-md"
           >
             {isListening && (
               <>
@@ -69,10 +69,10 @@ export default function VoiceAssistantPage() {
 
         {/* Action Buttons */}
         <div className="flex gap-8">
-          <button className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
+          <button className="w-16 h-16 bg-white rounded-full border flex items-center justify-center shadow-sm hover:shadow-md transition-shadow">
             <Mic className="w-8 h-8 text-pink-500" />
           </button>
-          <button className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
+          <button className="w-16 h-16 bg-white rounded-full flex border items-center justify-center shadow-sm hover:shadow-md transition-shadow">
             <Phone className="w-8 h-8 text-pink-500" />
           </button>
         </div>
