@@ -24,7 +24,69 @@ export async function POST(request: NextRequest) {
   try {
     const body: RouteRequest = await request.json();
     const { startLat, startLon, endLat, endLon, transportMode } = body;
+    const serverKey = process.env.GOOGLE_MAPS_API_KEY;
+    
+    // Log if we're missing the server key
+    if (!serverKey) {
+      console.warn('No GOOGLE_MAPS_API_KEY found in environment, will use OSRM fallback');
+    }
 
+    // Helper to strip HTML tags from Google instructions
+    const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
+
+    // If a server-side Google Maps key is present, prefer Google's Directions API
+    if (serverKey) {
+      const modeMap: { [k: string]: string } = {
+        driving: 'driving',
+        walking: 'walking',
+        public: 'transit',
+      };
+
+      const mode = modeMap[transportMode] || 'driving';
+
+      const params: any = {
+        origin: `${startLat},${startLon}`,
+        destination: `${endLat},${endLon}`,
+        mode,
+        key: serverKey,
+      };
+
+      // For driving we can request traffic-influenced durations
+      if (mode === 'driving') {
+        params.departure_time = 'now';
+        params.traffic_model = 'best_guess';
+      }
+
+      // For transit, a departure_time is required to get realistic schedules
+      if (mode === 'transit') {
+        params.departure_time = 'now';
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/directions/json?${new URLSearchParams(params).toString()}`;
+      const gRes = await fetch(url);
+      const gData = await gRes.json();
+
+      if (gData.status !== 'OK' || !gData.routes || gData.routes.length === 0) {
+        // If Google fails, fall back to OSRM below
+        console.warn('Google Directions failed, falling back to OSRM:', gData.status, gData.error_message);
+      } else {
+        const route = gData.routes[0];
+        const leg = route.legs && route.legs[0];
+
+        return NextResponse.json({
+          distance: leg ? leg.distance.value : null, // meters
+          duration: leg ? (leg.duration_in_traffic ? leg.duration_in_traffic.value : leg.duration.value) : null, // seconds (prefer traffic-aware)
+          geometry: route.overview_polyline ? route.overview_polyline.points : null, // encoded polyline
+          steps: (leg && leg.steps) ? leg.steps.map((s: any) => ({
+            instruction: s.html_instructions ? stripHtml(s.html_instructions) : s.instructions || '',
+            distance: s.distance ? s.distance.value : null,
+            duration: s.duration ? s.duration.value : null,
+          })) : [],
+        });
+      }
+    }
+
+    // Fallback: Use OSRM (public, no key) if Google wasn't used or failed
     // Map transport modes to OSRM profiles
     const profileMap = {
       driving: 'car',

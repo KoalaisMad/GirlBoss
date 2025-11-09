@@ -36,6 +36,73 @@ declare global {
   }
 }
 
+// Reusable hook to dynamically load Google Maps JS API on the client.
+function useLoadGoogleMaps() {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // If SDK already present, mark loaded.
+    if (typeof window !== 'undefined' && (window as any).google && (window as any).google.maps) {
+      setLoaded(true);
+      return;
+    }
+
+    // If script already injected, attach listeners. Match either our marker or any maps.googleapis script.
+    const existing = (document.querySelector('script[data-google-maps]') || document.querySelector('script[src*="maps.googleapis.com"]')) as HTMLScriptElement | null;
+    if (existing) {
+      const onLoad = () => {
+        // Sometimes the script loads but window.google is not available due to API key / referrer issues.
+        if ((window as any).google && (window as any).google.maps) {
+          setLoaded(true);
+        } else {
+          setError('Google Maps script loaded but `window.google` is not available — check API key and referrer restrictions');
+        }
+      };
+      const onError = () => setError('Failed to load Google Maps script');
+      existing.addEventListener('load', onLoad);
+      existing.addEventListener('error', onError);
+      // If the SDK is already present on window, run check immediately
+      if ((window as any).google && (window as any).google.maps) {
+        onLoad();
+      }
+      return () => {
+        existing.removeEventListener('load', onLoad);
+        existing.removeEventListener('error', onError);
+      };
+    }
+
+    // Inject script
+    const script = document.createElement('script');
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!key) {
+      setError('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not defined. Add it to .env.local and restart dev.');
+      return;
+    }
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places,directions`;
+    script.async = true;
+    script.defer = true;
+    script.setAttribute('data-google-maps', '1');
+    script.onload = () => {
+      // Give the SDK a moment to initialize
+      setTimeout(() => {
+        if ((window as any).google && (window as any).google.maps) {
+          setLoaded(true);
+        } else {
+          setError('Google Maps script loaded but `window.google` is not available — check API key and referrer restrictions');
+        }
+      }, 200);
+    };
+    script.onerror = () => setError('Failed to load Google Maps script');
+    document.head.appendChild(script);
+
+    // don't remove script on cleanup
+    return () => {};
+  }, []);
+
+  return { loaded, error } as const;
+}
+
 export default function TripPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,6 +112,9 @@ export default function TripPage() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const [mapInitError, setMapInitError] = useState<string | null>(null);
+
+  const { loaded: mapsLoaded, error: mapsError } = useLoadGoogleMaps();
 
   const destination = searchParams.get("destination") || "Unknown";
   const transport = searchParams.get("transport") || "driving";
@@ -128,13 +198,18 @@ export default function TripPage() {
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    const initMap = () => {
-      if (!window.google) {
-        setTimeout(initMap, 100);
-        return;
-      }
+    if (!mapsLoaded) {
+      // Not loaded yet; surface any load error
+      if (mapsError) setMapInitError(mapsError);
+      return;
+    }
 
-      const map = new window.google.maps.Map(mapRef.current!, {
+    // maps SDK is available, initialize map once
+    setMapInitError(null);
+
+    let map: any = null;
+    try {
+      map = new window.google.maps.Map(mapRef.current!, {
         center: { lat: startLat, lng: startLon },
         zoom: 13,
         styles: [
@@ -145,8 +220,12 @@ export default function TripPage() {
           },
         ],
       });
-
       mapInstanceRef.current = map;
+    } catch (err: any) {
+      console.error('Map initialization error:', err);
+      setMapInitError(err?.message || String(err));
+      return;
+    }
 
       // Add markers
       new window.google.maps.Marker({
@@ -177,38 +256,54 @@ export default function TripPage() {
         },
       });
 
-      // Draw route using Directions Service
+      // Calculate routes for all modes
       const directionsService = new window.google.maps.DirectionsService();
-      const directionsRenderer = new window.google.maps.DirectionsRenderer({
-        map,
-        suppressMarkers: true,
-        polylineOptions: {
-          strokeColor: "#EC4899",
-          strokeWeight: 4,
-        },
-      });
+      const modeColors = {
+        DRIVING: "#3B82F6", // blue
+        WALKING: "#10B981", // green
+        TRANSIT: "#EC4899", // pink
+      };
 
-      const travelMode = 
-        transport === 'walking' ? window.google.maps.TravelMode.WALKING :
-        transport === 'public' ? window.google.maps.TravelMode.TRANSIT :
-        window.google.maps.TravelMode.DRIVING;
+      const renderRoute = (mode: string) => {
+        const directionsRenderer = new window.google.maps.DirectionsRenderer({
+          map,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: modeColors[mode as keyof typeof modeColors] || "#EC4899",
+            strokeWeight: 4,
+            strokeOpacity: mode === transport.toUpperCase() ? 1 : 0.5, // highlight selected mode
+          },
+        });
 
-      directionsService.route(
-        {
-          origin: { lat: startLat, lng: startLon },
-          destination: { lat: endLat, lng: endLon },
-          travelMode: travelMode,
-        },
-        (result: any, status: any) => {
-          if (status === window.google.maps.DirectionsStatus.OK) {
-            directionsRenderer.setDirections(result);
+        directionsService.route(
+          {
+            origin: { lat: startLat, lng: startLon },
+            destination: { lat: endLat, lng: endLon },
+            travelMode: window.google.maps.TravelMode[mode as keyof typeof window.google.maps.TravelMode],
+          },
+          (result: any, status: any) => {
+            const okStatus = status === "OK" || status === window.google.maps.DirectionsStatus.OK;
+            if (okStatus && result) {
+              directionsRenderer.setDirections(result);
+              // If this is the selected mode, fit bounds
+              if (mode === transport.toUpperCase()) {
+                const bounds = new window.google.maps.LatLngBounds();
+                result.routes[0]?.overview_path?.forEach((p: any) => bounds.extend(p));
+                map.fitBounds(bounds);
+              }
+            } else {
+              console.warn(`Directions request failed for ${mode}:`, status);
+            }
           }
-        }
-      );
-    };
+        );
+      };
 
-    initMap();
-  }, [startLat, startLon, endLat, endLon, destination, transport]);
+    // Draw all routes, selected mode last so it's on top
+    const modes = ['DRIVING', 'WALKING', 'TRANSIT'].sort(
+      (a, b) => (a === transport.toUpperCase() ? 1 : 0) - (b === transport.toUpperCase() ? 1 : 0)
+    );
+    modes.forEach(renderRoute);
+  }, [startLat, startLon, endLat, endLon, destination, transport, mapsLoaded, mapsError]);
 
   const openInGoogleMaps = () => {
     const url = `https://www.google.com/maps/dir/?api=1&origin=${startLat},${startLon}&destination=${endLat},${endLon}&travelmode=${transport === 'walking' ? 'walking' : transport === 'public' ? 'transit' : 'driving'}`;
@@ -309,7 +404,15 @@ export default function TripPage() {
 
             {/* Map */}
             <div className="bg-gray-100 rounded-3xl overflow-hidden h-96 relative">
-              <div ref={mapRef} className="w-full h-full" />
+              <div ref={mapRef} className="w-full h-full" data-debug-map />
+
+              {/* Debug overlay to help diagnose SDK / init issues */}
+              <div className="absolute top-4 right-4 bg-white bg-opacity-90 rounded px-3 py-2 text-xs shadow">
+                <div className="font-medium">Map debug</div>
+                <div>SDK Loaded: {mapsLoaded ? <span className="text-green-600">yes</span> : <span className="text-red-600">no</span>}</div>
+                <div>Init error: {mapInitError ?? mapsError ?? 'none'}</div>
+              </div>
+
               <button 
                 onClick={openInGoogleMaps}
                 className="absolute bottom-4 left-4 bg-white rounded-lg px-4 py-2 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
