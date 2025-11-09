@@ -80,6 +80,13 @@ export default function Home() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isSendingAlert, setIsSendingAlert] = useState(false);
 
+  // Trip history state
+  const [tripHistory, setTripHistory] = useState<Array<{
+    location: string;
+    address: string;
+    date: string;
+  }>>([]);
+
   
 
   // grab user's location when page loads
@@ -118,23 +125,31 @@ export default function Home() {
     }
   }, [userId, selectedTransport]);
 
-  const tripHistory = [
-    {
-      location: "Zachary Engineering Complex",
-      address: "12345 Sigma Street",
-      date: "November 7, 2025",
-    },
-    {
-      location: "Rise College Station",
-      address: "67 Sigma Street",
-      date: "November 7, 2025",
-    },
-    {
-      location: "Zachary Engineering Complex",
-      address: "12345 Sigma Street",
-      date: "November 6, 2025",
-    },
-  ];
+  // Load trip history from database
+  useEffect(() => {
+    const loadTripHistory = async () => {
+      if (!userEmail) return;
+
+      try {
+        console.log('📋 Loading trip history for:', userEmail);
+        const response = await fetch(`/api/trips/user/${encodeURIComponent(userEmail)}?limit=3`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.trips) {
+            setTripHistory(data.trips);
+            console.log('✅ Loaded', data.trips.length, 'trips from database');
+          }
+        } else {
+          console.error('❌ Failed to load trips:', await response.text());
+        }
+      } catch (error) {
+        console.error('❌ Error loading trip history:', error);
+      }
+    };
+
+    loadTripHistory();
+  }, [userEmail]);
 
   // this searches OpenStreetMap for locations as you type
   // had to use Nominatim API cuz Google Maps costs money lol
@@ -310,7 +325,7 @@ export default function Home() {
   };
 
   // Calculate route when destination is selected
-  const calculateRoute = () => {
+  const calculateRoute = async () => {
     if (
       !currentLocation ||
       !selectedLocation ||
@@ -329,18 +344,46 @@ export default function Home() {
     setIsCalculatingRoute(true);
 
     try {
-      // Store the trip in backend before navigating
-      fetch("/api/location", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          lat: currentLocation.lat,
-          lon: currentLocation.lon,
-          preferredTransport: selectedTransport,
-          destination: selectedLocation.name,
-        }),
-      }).catch((err) => console.error("Error storing trip:", err));
+      // Save trip to MongoDB
+      if (userEmail) {
+        console.log('💾 Saving trip to database...');
+        const tripResponse = await fetch("/api/trips", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: userEmail,
+            destination: {
+              name: selectedLocation.name,
+              address: selectedLocation.address,
+              lat: selectedLocation.lat,
+              lon: selectedLocation.lon,
+              distance: selectedLocation.distance,
+            },
+            startLocation: {
+              lat: currentLocation.lat,
+              lon: currentLocation.lon,
+              address: "Current Location",
+            },
+            transportMode: selectedTransport,
+          }),
+        });
+
+        if (tripResponse.ok) {
+          const tripData = await tripResponse.json();
+          console.log('✅ Trip saved:', tripData);
+          
+          // Reload trip history to show the new trip
+          const historyResponse = await fetch(`/api/trips/user/${encodeURIComponent(userEmail)}?limit=3`);
+          if (historyResponse.ok) {
+            const historyData = await historyResponse.json();
+            if (historyData.success && historyData.trips) {
+              setTripHistory(historyData.trips);
+            }
+          }
+        } else {
+          console.error('❌ Failed to save trip:', await tripResponse.text());
+        }
+      }
 
       // Navigate to trip page with route parameters
       const params = new URLSearchParams({
@@ -575,24 +618,30 @@ export default function Home() {
         <div className="mb-10">
           <h2 className="text-xl font-semibold mb-4">Trip History</h2>
           <div className="space-y-6">
-            {tripHistory.map((trip, index) => (
-              <div key={index} className="flex items-center gap-4 rounded-2xl">
-                <div className="w-10 h-10 bg-pink-200 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Navigation className="w-5 h-5 text-pink-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text">
-                    {trip.location}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <p className="text-gray-500 text-sm">{trip.address}</p>
+            {tripHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <p>No trips yet. Start your first trip above!</p>
+              </div>
+            ) : (
+              tripHistory.map((trip, index) => (
+                <div key={index} className="flex items-center gap-4 rounded-2xl">
+                  <div className="w-10 h-10 bg-pink-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Navigation className="w-5 h-5 text-pink-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 text">
+                      {trip.location}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <p className="text-gray-500 text-sm">{trip.address}</p>
+                    </div>
+                  </div>
+                  <div className="hidden md:block text-sm text-gray-400 flex-shrink-0">
+                    {trip.date}
                   </div>
                 </div>
-                <div className="hidden md:block text-sm text-gray-400 flex-shrink-0">
-                  {trip.date}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 

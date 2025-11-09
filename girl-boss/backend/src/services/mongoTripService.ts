@@ -14,11 +14,13 @@ export interface Trip {
     lat: number;
     lon: number;
     address?: string;
+    name?: string;
   };
   endLocation: {
     lat: number;
     lon: number;
     address?: string;
+    name?: string;
   };
   transportMode: 'walking' | 'driving' | 'public';
   safetyScore: number;
@@ -57,6 +59,25 @@ export const getUserTrips = async (userId: string, limit: number = 10): Promise<
   return trips
     .find({ userId: new ObjectId(userId) })
     .sort({ createdAt: -1 })
+    .limit(limit)
+    .toArray();
+};
+
+export const getTripsByUserEmail = async (email: string, limit: number = 3): Promise<Trip[]> => {
+  const db = getDB();
+  const users = db.collection('users');
+  const trips = db.collection<Trip>('trips');
+  
+  // Find user by email
+  const user = await users.findOne({ email: email.toLowerCase().trim() });
+  if (!user) {
+    return [];
+  }
+  
+  // Get user's trips, sorted by newest first
+  return trips
+    .find({ userId: user._id })
+    .sort({ startTime: -1 })
     .limit(limit)
     .toArray();
 };

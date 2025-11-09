@@ -10,6 +10,7 @@ import yappingRoutes from './routes/yappingRoutes';
 import chatbotRoutes from './routes/chatbotRoutes';
 import userRoutes from './routes/userRoutes';
 import emergencyRoutes from './routes/emergencyRoutes';
+import tripRoutes from './routes/tripRoutes';
 
 // load env vars from .env file
 dotenv.config();
@@ -40,6 +41,7 @@ app.use('/api/yap', yappingRoutes);
 app.use('/api/chat', chatbotRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/emergency', emergencyRoutes);
+app.use('/api/trips', tripRoutes);
 
 // handle 404s
 app.use((req: Request, res: Response) => {
