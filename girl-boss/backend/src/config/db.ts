@@ -73,59 +73,45 @@
  *    - If error, check: connection string, network access, credentials
  */
 
-// import { MongoClient, Db } from 'mongodb';
 
-// let db: Db | null = null;
-// let client: MongoClient | null = null;
+import { MongoClient, Db } from 'mongodb';
 
-// export const connectMongoDB = async (): Promise<Db> => {
-//   if (db) {
-//     return db;
-//   }
+let db: Db | null = null;
+let client: MongoClient | null = null;
 
-//   try {
-//     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/girlboss';
+export const connectMongoDB = async (): Promise<Db> => {
+  if (db) {
+    return db;
+  }
+
+  try {
+    const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/girlboss';
     
-//     client = new MongoClient(uri);
-//     await client.connect();
+    client = new MongoClient(uri);
+    await client.connect();
     
-//     db = client.db();
-//     console.log('Connected to MongoDB');
+    db = client.db();
+    console.log('Connected to MongoDB');
     
-//     return db;
-//   } catch (error) {
-//     console.error('MongoDB connection error:', error);
-//     throw error;
-//   }
-// };
+    return db;
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
+  }
+};
 
-// export const getDB = (): Db => {
-//   if (!db) {
-//     throw new Error('Database not initialized. Call connectMongoDB first.');
-//   }
-//   return db;
-// };
+export const getDB = (): Db => {
+  if (!db) {
+    throw new Error('Database not initialized. Call connectMongoDB first.');
+  }
+  return db;
+};
 
-// export const closeMongoDB = async (): Promise<void> => {
-//   if (client) {
-//     await client.close();
-//     db = null;
-//     client = null;
-//     console.log('MongoDB connection closed');
-//   }
-// };
-
-import mongoose from "mongoose";
-
-const uri = process.env.MONGODB_URI!; 
-
-export async function connectToMongoDB() 
-{ try 
-  { if (mongoose.connection.readyState === 0) 
-    { 
-      await mongoose.connect(uri); console.log("Connected to MongoDB Atlas"); 
-    } 
-  } catch (error) { 
-    console.error("MongoDB connection error:", error); 
-  } 
-}
+export const closeMongoDB = async (): Promise<void> => {
+  if (client) {
+    await client.close();
+    db = null;
+    client = null;
+    console.log('MongoDB connection closed');
+  }
+};

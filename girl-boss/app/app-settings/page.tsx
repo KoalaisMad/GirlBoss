@@ -221,28 +221,13 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Navigation from "../components/Navigation";
-
-// ---- API helpers you already have (adjust import path if different)
-
-import { upsertUser, getUser, addContact, updateContact, deleteContact } from "@/lib/contact";
+import { upsertUser, getUser, addContact, deleteContact } from "@/lib/contact";
 
 type Contact = { _id: string; name: string; phone: string };
 
@@ -296,6 +281,21 @@ export default function SettingsPage({ userId: userIdProp }: { userId?: string }
   const canSubmit = Boolean(
     userId && newContactName.trim() && newContactPhone.trim()
   );
+
+  // ----------------- load contacts when userId is available -----------------
+  useEffect(() => {
+    if (!userId || loadingRef.current) return;
+    loadingRef.current = true;
+    
+    getUser(userId)
+      .then(user => {
+        if (user?.emergencyContacts) {
+          setContacts(decorate(user.emergencyContacts));
+        }
+      })
+      .catch(err => console.error("Failed to load contacts:", err))
+      .finally(() => { loadingRef.current = false; });
+  }, [userId]);
 
   // ----------------- add contact -----------------
   const handleAddContact = async () => {
@@ -419,20 +419,14 @@ export default function SettingsPage({ userId: userIdProp }: { userId?: string }
                       setNewContactName("");
                       setNewContactPhone("");
                     }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                   >
                     Cancel
-                  </Button>
-                  <Button
-                    onClick={handleAddContact}
-                    disabled={!newContactName.trim() || !newContactPhone.trim()}
-                    className="bg-pink-500 hover:bg-pink-600"
-                  >
-                    Add Contact
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Contact List */}
           <div className="space-y-3">
