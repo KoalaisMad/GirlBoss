@@ -62,7 +62,7 @@ export default function LandingPage() {
             Safety one step at a time!
           </h1>
           <p className="text-gray-600 mb-6 sm:mb-8 text-sm sm:text-base md:text-lg max-w-2xl px-4">
-            Find the safest possible way to travel from 2 locations
+            Find the safest possible way to travel to your destination
           </p>
           <div className="flex items-center justify-center gap-4 px-4">
             <Button 
