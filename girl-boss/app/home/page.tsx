@@ -27,6 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import NavigationMenu from "../components/Navigation";
 import { getUserByEmail } from "@/lib/contact";
 
@@ -73,6 +80,9 @@ export default function Home() {
   } | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isSendingAlert, setIsSendingAlert] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Emergency alert states
@@ -685,6 +695,22 @@ export default function Home() {
                 Notify Emergency Contact!
               </>
             )}
+          <Button 
+            onClick={handleEmergencyButtonClick}
+            disabled={isSendingAlert || !currentLocation}
+            className="w-full py-2 bg-red-500 text-white hover:bg-red-600 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSendingAlert ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Sending Alert...
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="w-5 h-5 mr-2" />
+                Notify Emergency Contact!
+              </>
+            )}
           </Button>
         </div>
 
@@ -740,6 +766,63 @@ export default function Home() {
           </DialogContent>
         </Dialog>
       </main>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6 text-red-500" />
+              Confirm Emergency Alert
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              This will send an emergency alert to{" "}
+              <span className="font-semibold">(832) 886-7189</span> with your
+              current location. Continue?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={() => setShowConfirmDialog(false)}
+              variant="outline"
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendEmergencyAlert}
+              className="flex-1 bg-pink-400 hover:bg-pink-600"
+            >
+              Send Alert
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+ 
+              Alert Sent Successfully!
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              Your emergency alert has been sent to{" "}
+              <span className="font-semibold">(832) 886-7189</span> with your
+              current location.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              onClick={() => setShowSuccessDialog(false)}
+              className="bg-pink-400 hover:bg-pink-600 w-full"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
