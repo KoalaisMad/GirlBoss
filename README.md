@@ -4,6 +4,8 @@
 
 It blends modern design, geospatial data, and AI-driven analytics into one seamless experience.
 
+Second Place for Databricks and Best use of Snowflake at TAMU Datathon 25
+
 ---
 
 ## ✨ Features
