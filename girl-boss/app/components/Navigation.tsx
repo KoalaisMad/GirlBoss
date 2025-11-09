@@ -1,9 +1,9 @@
 "use client";
-
-import { useState } from "react";
-import { X, Home, Map, MessageSquare, Mic, Settings } from "lucide-react";
+import { X, Home, Map, MessageSquare, Mic, Settings, LogOut, LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signOut, signIn, useSession } from "next-auth/react";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
 
 interface NavigationProps {
   isOpen: boolean;
@@ -12,6 +12,7 @@ interface NavigationProps {
 
 export default function Navigation({ isOpen, onClose }: NavigationProps) {
   const router = useRouter();
+  const { data: session } = useSession();
 
   const menuItems = [
     { name: "Home", icon: Home, path: "/" },
@@ -45,16 +46,10 @@ export default function Navigation({ isOpen, onClose }: NavigationProps) {
               <Image
                 src="/girlboss.png"
                 alt="GirlBoss Logo"
-                width={40}
-                height={40}
+                width={150}
+                height={150}
                 className="rounded-lg"
               />
-              <div>
-                <span className="text-xl font-bold">
-                  <span className="text-pink-500">Girl</span>
-                  <span className="text-black">Boss</span>
-                </span>
-              </div>
             </div>
             <button
               onClick={onClose}
@@ -76,7 +71,7 @@ export default function Navigation({ isOpen, onClose }: NavigationProps) {
                     <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-200 transition-colors">
                       <item.icon className="w-5 h-5 text-pink-600" />
                     </div>
-                    <span className="text-lg font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900">
                       {item.name}
                     </span>
                   </button>
@@ -86,9 +81,25 @@ export default function Navigation({ isOpen, onClose }: NavigationProps) {
           </nav>
 
           {/* Footer */}
-          <div className="p-6 border-t border-gray-200">
+          <div className="p-6 border-t border-gray-200 space-y-4">
+            <Button
+              onClick={() => session ? signOut({ callbackUrl: "/" }) : signIn("google")}
+              className="w-full bg-[#FF2A8A] hover:bg-[#E01D7A] text-white"
+            >
+              {session ? (
+                <>
+                  <LogOut className="w-5 h-5 mr-2" />
+                  Logout
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5 mr-2" />
+                  Login
+                </>
+              )}
+            </Button>
             <p className="text-sm text-gray-500 text-center">
-              © 2025 GirlBoss. Empowering women to lead and succeed.
+              © 2025 GirlBoss.
             </p>
           </div>
         </div>

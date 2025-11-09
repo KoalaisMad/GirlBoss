@@ -4,10 +4,22 @@
 
 "use client";
 
-import { Menu, Search, Navigation, Car, User, AlertTriangle, Bus, MapPin, Loader2 } from "lucide-react";
+import {
+  Menu,
+  Search,
+  Navigation,
+  Car,
+  User,
+  AlertTriangle,
+  Bus,
+  MapPin,
+  Loader2,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
 import NavigationMenu from "../components/Navigation";
 
 interface Location {
@@ -20,16 +32,29 @@ interface Location {
 
 export default function Home() {
   const router = useRouter();
-  const [userName] = useState("Sophia");
+  const { data: session } = useSession();
+  
+  // Get first name from session, fallback to "User"
+  const userName = session?.user?.name?.split(" ")[0] || "User";
   const [userId] = useState("user-" + Math.random().toString(36).substr(2, 9)); // Generate unique user ID
-  const [selectedTransport, setSelectedTransport] = useState<string | null>(null);
+  const [selectedTransport, setSelectedTransport] = useState<string | null>(
+    null
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    null
+  );
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lon: number } | null>(null);
-  const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{
+    distance: number;
+    duration: number;
+  } | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -45,12 +70,12 @@ export default function Home() {
             lon: position.coords.longitude,
           };
           setCurrentLocation(location);
-          
+
           // save it to backend too
           try {
-            await fetch('/api/location', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            await fetch("/api/location", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 userId,
                 lat: location.lat,
@@ -59,12 +84,12 @@ export default function Home() {
               }),
             });
           } catch (error) {
-            console.error('Error storing location:', error);
+            console.error("Error storing location:", error);
           }
         },
         (error) => {
-          console.error('Error getting location:', error);
-          alert('Please enable location services to use this app');
+          console.error("Error getting location:", error);
+          alert("Please enable location services to use this app");
         }
       );
     }
@@ -103,7 +128,7 @@ export default function Home() {
         let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           searchQuery
         )}&limit=50&addressdetails=1&dedupe=0`;
-        
+
         // if we have user's location, prioritize nearby results
         if (currentLocation) {
           // make a box around user (about 50 miles)
@@ -114,23 +139,24 @@ export default function Home() {
             currentLocation.lat + latRange,
             currentLocation.lon + lonRange,
             currentLocation.lat - latRange,
-          ].join(',');
-          
+          ].join(",");
+
           searchUrl += `&viewbox=${viewbox}&bounded=0`;
         }
 
         const response = await fetch(searchUrl, {
           headers: {
-            'User-Agent': 'GirlBoss App'
-          }
+            "User-Agent": "GirlBoss App",
+          },
         });
         const data = await response.json();
-        
+
         const formattedLocations: Location[] = data.map((item: any) => {
           // Build a better formatted address
           const addressParts = [];
           if (item.address) {
-            if (item.address.house_number) addressParts.push(item.address.house_number);
+            if (item.address.house_number)
+              addressParts.push(item.address.house_number);
             if (item.address.road) addressParts.push(item.address.road);
             if (item.address.suburb) addressParts.push(item.address.suburb);
             if (item.address.city) addressParts.push(item.address.city);
@@ -138,10 +164,10 @@ export default function Home() {
             if (item.address.postcode) addressParts.push(item.address.postcode);
             if (item.address.country) addressParts.push(item.address.country);
           }
-          
+
           const lat = parseFloat(item.lat);
           const lon = parseFloat(item.lon);
-          
+
           // Calculate distance from current location if available
           let distance = null;
           if (currentLocation) {
@@ -152,19 +178,30 @@ export default function Home() {
               lon
             );
           }
-          
+
           return {
-            name: item.name || addressParts.slice(0, 2).join(' ') || item.display_name.split(',')[0],
-            address: addressParts.length > 0 ? addressParts.join(', ') : item.display_name,
+            name:
+              item.name ||
+              addressParts.slice(0, 2).join(" ") ||
+              item.display_name.split(",")[0],
+            address:
+              addressParts.length > 0
+                ? addressParts.join(", ")
+                : item.display_name,
             lat,
             lon,
             distance,
           };
         });
-        
+
         // Sort by distance - locations within 50 miles first
         const sortedLocations = formattedLocations.sort((a, b) => {
-          if (a.distance !== null && a.distance !== undefined && b.distance !== null && b.distance !== undefined) {
+          if (
+            a.distance !== null &&
+            a.distance !== undefined &&
+            b.distance !== null &&
+            b.distance !== undefined
+          ) {
             // Both have distances - sort by distance
             return a.distance - b.distance;
           } else if (a.distance !== null && a.distance !== undefined) {
@@ -177,7 +214,7 @@ export default function Home() {
           // Neither has distance - maintain original order
           return 0;
         });
-        
+
         // Limit to 10 results for display
         setLocations(sortedLocations.slice(0, 10));
       } catch (error) {
@@ -196,18 +233,26 @@ export default function Home() {
   }, [searchQuery, currentLocation]);
 
   // Calculate distance between two coordinates (Haversine formula)
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
     const R = 3959; // Earth's radius in miles
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    
+
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
-    
+
     return distance;
   };
 
@@ -218,7 +263,10 @@ export default function Home() {
   // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -240,13 +288,18 @@ export default function Home() {
 
   // Calculate route when destination is selected
   const calculateRoute = () => {
-    if (!currentLocation || !selectedLocation || !selectedLocation.lat || !selectedLocation.lon) {
-      alert('Please select a destination and ensure location is enabled');
+    if (
+      !currentLocation ||
+      !selectedLocation ||
+      !selectedLocation.lat ||
+      !selectedLocation.lon
+    ) {
+      alert("Please select a destination and ensure location is enabled");
       return;
     }
 
     if (!selectedTransport) {
-      alert('Please select a preferred transport mode');
+      alert("Please select a preferred transport mode");
       return;
     }
 
@@ -254,9 +307,9 @@ export default function Home() {
 
     try {
       // Store the trip in backend before navigating
-      fetch('/api/location', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
           lat: currentLocation.lat,
@@ -264,7 +317,7 @@ export default function Home() {
           preferredTransport: selectedTransport,
           destination: selectedLocation.name,
         }),
-      }).catch(err => console.error('Error storing trip:', err));
+      }).catch((err) => console.error("Error storing trip:", err));
 
       // Navigate to trip page with route parameters
       const params = new URLSearchParams({
@@ -278,8 +331,8 @@ export default function Home() {
 
       router.push(`/trip-options?${params.toString()}`);
     } catch (error) {
-      console.error('Navigation error:', error);
-      alert('Error starting trip. Please try again.');
+      console.error("Navigation error:", error);
+      alert("Error starting trip. Please try again.");
       setIsCalculatingRoute(false);
     }
   };
@@ -287,12 +340,12 @@ export default function Home() {
   // Update transport preference in backend
   const handleTransportChange = async (transport: string) => {
     setSelectedTransport(transport);
-    
+
     if (currentLocation) {
       try {
-        await fetch('/api/location', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        await fetch("/api/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId,
             lat: currentLocation.lat,
@@ -301,7 +354,7 @@ export default function Home() {
           }),
         });
       } catch (error) {
-        console.error('Error updating transport preference:', error);
+        console.error("Error updating transport preference:", error);
       }
     }
   };
@@ -309,11 +362,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       <NavigationMenu isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-      
+
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
+          <button
+            onClick={() => router.push("/")}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+          >
             <Image
               src="/girlboss.png"
               alt="GirlBoss Logo"
@@ -323,7 +379,7 @@ export default function Home() {
             />
           </button>
         </div>
-        <button 
+        <button
           onClick={() => setIsNavOpen(true)}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
         >
@@ -332,9 +388,9 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="px-6 pt-8 pb-6 max-w-2xl mx-auto">
+      <main className="px-8 pt-12 pb-6 max-w-2xl mx-auto">
         {/* Greeting */}
-        <h1 className="text-4xl font-bold mb-8 text-center">
+        <h1 className="text-4xl font-semibold mb-8 text-center">
           Hello, <span className="text-pink-500">{userName}</span>
         </h1>
 
@@ -346,10 +402,10 @@ export default function Home() {
             value={searchQuery}
             onChange={handleSearchChange}
             onFocus={() => searchQuery.length > 0 && setShowDropdown(true)}
-            className="w-full px-6 py-4 pr-12 rounded-full border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-700 placeholder-gray-400"
+            className="w-full px-6 py-2 pr-10 rounded-3xl border border-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-700 placeholder-gray-400"
           />
           <Search className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          
+
           {/* Dropdown */}
           {showDropdown && isLoading && (
             <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 text-center text-gray-500">
@@ -359,7 +415,7 @@ export default function Home() {
               </div>
             </div>
           )}
-          
+
           {showDropdown && !isLoading && locations.length > 0 && (
             <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 max-h-80 overflow-y-auto">
               {locations.map((location, index) => (
@@ -371,56 +427,68 @@ export default function Home() {
                   <MapPin className="w-5 h-5 text-pink-500 mt-1 flex-shrink-0" />
                   <div className="flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="font-semibold text-gray-900">{location.name}</div>
-                      {location.distance !== null && location.distance !== undefined && (
-                        <div className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          location.distance <= 50 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {location.distance.toFixed(1)} mi
-                        </div>
-                      )}
+                      <div className="font-semibold text-gray-900">
+                        {location.name}
+                      </div>
+                      {location.distance !== null &&
+                        location.distance !== undefined && (
+                          <div
+                            className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              location.distance <= 50
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {location.distance.toFixed(1)} mi
+                          </div>
+                        )}
                     </div>
-                    <div className="text-sm text-gray-500 line-clamp-2">{location.address}</div>
+                    <div className="text-sm text-gray-500 line-clamp-2">
+                      {location.address}
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
           )}
-          
-          {showDropdown && !isLoading && searchQuery.length >= 3 && locations.length === 0 && (
-            <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 text-center text-gray-500">
-              No locations found. Try typing more of the address.
-            </div>
-          )}
-          
-          {showDropdown && searchQuery.length > 0 && searchQuery.length < 3 && !isLoading && (
-            <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 text-center text-gray-500">
-              Type at least 3 characters to search...
-            </div>
-          )}
+
+          {showDropdown &&
+            !isLoading &&
+            searchQuery.length >= 3 &&
+            locations.length === 0 && (
+              <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 text-center text-gray-500">
+                No locations found. Try typing more of the address.
+              </div>
+            )}
+
+          {showDropdown &&
+            searchQuery.length > 0 &&
+            searchQuery.length < 3 &&
+            !isLoading && (
+              <div className="absolute z-10 w-full mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 p-4 text-center text-gray-500">
+                Type at least 3 characters to search...
+              </div>
+            )}
         </div>
 
         {/* Trip History */}
         <div className="mb-10">
-          <h2 className="text-2xl font-bold mb-6">Trip History</h2>
-          <div className="space-y-4">
+          <h2 className="text-xl font-semibold mb-4">Trip History</h2>
+          <div className="space-y-6">
             {tripHistory.map((trip, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-4 p-4 rounded-2xl hover:bg-gray-50 transition-colors"
-              >
-                <div className="w-12 h-12 bg-pink-200 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Navigation className="w-6 h-6 text-pink-600" />
+              <div key={index} className="flex items-center gap-4 rounded-2xl">
+                <div className="w-10 h-10 bg-pink-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Navigation className="w-5 h-5 text-pink-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-lg">
+                  <h3 className="font-semibold text-gray-900 text">
                     {trip.location}
                   </h3>
-                  <p className="text-gray-500 text-sm">{trip.address}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-gray-500 text-sm">{trip.address}</p>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-400 flex-shrink-0">
+                <div className="hidden md:block text-sm text-gray-400 flex-shrink-0">
                   {trip.date}
                 </div>
               </div>
@@ -430,76 +498,83 @@ export default function Home() {
 
         {/* Preferred Transport */}
         <div className="mb-10">
-          <h2 className="text-2xl font-bold mb-6">Preferred Transport</h2>
+          <h2 className="text-lg font-semibold mb-4">Preferred Transport</h2>
           <div className="space-y-3">
             <button
               onClick={() => handleTransportChange("driving")}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl border-2 transition-all ${
+              className={`w-full flex items-center gap-4 px-4 py-2 rounded-2xl border-2 transition-all ${
                 selectedTransport === "driving"
                   ? "border-pink-500 bg-pink-50"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <div className="w-12 h-12 bg-pink-200 rounded-full flex items-center justify-center">
-                <Car className="w-6 h-6 text-pink-600" />
+              <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
+                <Car className="w-5 h-5 text-pink-600" />
               </div>
-              <span className="text-lg font-semibold text-gray-900">Driving</span>
+              <span className="font-semibold text-gray-900">
+                Driving
+              </span>
             </button>
             <button
               onClick={() => handleTransportChange("walking")}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl border-2 transition-all ${
+              className={`w-full flex items-center gap-4 px-4 py-2 rounded-2xl border-2 transition-all ${
                 selectedTransport === "walking"
                   ? "border-pink-500 bg-pink-50"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <div className="w-12 h-12 bg-pink-200 rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-pink-600" />
+              <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-pink-600" />
               </div>
-              <span className="text-lg font-semibold text-gray-900">Walking</span>
+              <span className="font-semibold text-gray-900">
+                Walking
+              </span>
             </button>
             <button
               onClick={() => handleTransportChange("public")}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl border-2 transition-all ${
+              className={`w-full flex items-center gap-4 px-4 py-2 rounded-2xl border-2 transition-all ${
                 selectedTransport === "public"
                   ? "border-pink-500 bg-pink-50"
                   : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <div className="w-12 h-12 bg-pink-200 rounded-full flex items-center justify-center">
-                <Bus className="w-6 h-6 text-pink-600" />
+              <div className="w-10 h-10 bg-pink-200 rounded-full flex items-center justify-center">
+                <Bus className="w-5 h-5 text-pink-600" />
               </div>
-              <span className="text-lg font-semibold text-gray-900">Public Transport</span>
+              <span className="font-semibold text-gray-900">
+                Public Transport
+              </span>
             </button>
           </div>
         </div>
 
         {/* Start Trip Button */}
-        <button 
+        <Button
           onClick={calculateRoute}
-          disabled={isCalculatingRoute || !selectedLocation || !selectedTransport}
-          className="w-full py-5 bg-gray-900 text-white rounded-2xl text-lg font-semibold hover:bg-gray-800 transition-colors mb-10 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          disabled={
+            isCalculatingRoute || !selectedLocation || !selectedTransport
+          }
+          className="w-full py-2 bg-gray-900 text-white hover:bg-gray-800 mb-10 shadow-lg"
         >
           {isCalculatingRoute ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
               Calculating Route...
             </>
           ) : (
-            'Start Trip'
+            "Start Trip"
           )}
-        </button>
+        </Button>
 
         {/* Emergency Section */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold mb-4">Feeling Unsafe?</h2>
-          <button className="w-full py-5 bg-red-500 text-white rounded-2xl text-lg font-semibold hover:bg-red-600 transition-colors flex items-center justify-center gap-2 shadow-lg">
-            <AlertTriangle className="w-5 h-5" />
+        <div className="pb-12">
+          <h2 className="text-lg font-semibold mb-4">Feeling Unsafe?</h2>
+          <Button className="w-full py-2 bg-red-500 text-white hover:bg-red-600 shadow-lg">
+            <AlertTriangle className="w-5 h-5 mr-2" />
             Notify Emergency Contact!
-          </button>
+          </Button>
         </div>
       </main>
     </div>
   );
 }
-

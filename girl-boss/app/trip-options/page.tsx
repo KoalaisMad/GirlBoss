@@ -251,10 +251,10 @@ export default function TripPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-2xl mx-auto px-6 py-8">
+      <main className="max-w-2xl mx-auto px-8 pt-12 py-8">
         {/* Title Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Trip Options</h1>
+        <div className="text-center mb-6">
+          <h1 className="text-4xl font-semibold text-gray-900 mb-2 text-center">Trip Options</h1>
           <p className="text-pink-400 text-lg">View your trip's safety score</p>
         </div>
 
@@ -278,7 +278,7 @@ export default function TripPage() {
                     <option.icon className="w-8 h-8 text-gray-900" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1">
                       {getModeName(option.mode)}
                     </h3>
                     <p className="text-gray-600">
@@ -287,7 +287,7 @@ export default function TripPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-gray-600 text-sm mb-1">Safety Score</p>
-                    <p className={`text-3xl font-bold ${
+                    <p className={`text-3xl font-semibold ${
                       option.safetyScore >= 80 ? 'text-pink-500' : 
                       option.safetyScore >= 60 ? 'text-orange-500' : 
                       'text-red-500'
@@ -302,7 +302,7 @@ export default function TripPage() {
             {/* Recommended Trip Mode */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Recommended Trip Mode</h2>
+                <h2 className="text-2xl font-semibold text-gray-900">Recommended Trip Mode</h2>
                 <span className="text-pink-500 font-semibold">{getRecommendedMode()}</span>
               </div>
             </div>
