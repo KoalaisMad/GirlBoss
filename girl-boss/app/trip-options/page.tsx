@@ -350,7 +350,7 @@ export default function TripPage() {
         {/* Title Section */}
         <div className="text-center mb-6">
           <h1 className="text-4xl font-semibold text-gray-900 mb-2 text-center">Trip Options</h1>
-          <p className="text-pink-400 text-lg">View your trip's safety score</p>
+          <p className="text-pink-400 text">View your trip's safety score</p>
         </div>
 
         {isLoading ? (

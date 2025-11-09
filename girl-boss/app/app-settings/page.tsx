@@ -5,10 +5,22 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Plus } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import Navigation from "../components/Navigation";
 
 interface EmergencyContact {
@@ -75,7 +87,7 @@ export default function SettingsPage() {
       <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
       
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-200">
         <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
           <Image
             src="/girlboss.png"
@@ -94,91 +106,98 @@ export default function SettingsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-2xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-2 text-center">
+      <main className="max-w-2xl mx-auto px-8 py-12">
+        <h1 className="text-4xl font-semibold mb-2 text-center">
           <span className="text-gray-900">Settings</span>
         </h1>
-        <p className="text-center text-gray-500 text-sm mb-8">
+        <p className="text-center text-pink-400 mb-8">
           Manage your account
         </p>
 
         {/* Name Field */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+          <label className="block text-lg font-medium text-gray-700 mb-2">Name</label>
           <input
             type="text"
             value={session?.user?.name || ""}
             placeholder="Your Name"
             readOnly
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
+            className="w-full px-4 py-2 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
           />
         </div>
 
         {/* Email Field */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+          <label className="block text-lg font-medium text-gray-700 mb-2">Email</label>
           <input
             type="email"
             value={session?.user?.email || ""}
             placeholder="your.email@example.com"
             readOnly
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
+            className="w-full px-4 py-2 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
           />
         </div>
 
         {/* Emergency Contacts */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <label className="block text-sm font-medium text-gray-700">Emergency Contacts</label>
-            <button 
-              onClick={() => setShowAddContact(!showAddContact)}
-              className="w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center text-xl hover:bg-pink-600 transition-colors"
-            >
-              {showAddContact ? '−' : '+'}
-            </button>
-          </div>
-
-          {/* Add Contact Form */}
-          {showAddContact && (
-            <div className="mb-4 p-4 bg-pink-50 rounded-xl border-2 border-pink-200">
-              <h3 className="font-semibold text-gray-900 mb-3">Add New Emergency Contact</h3>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Contact Name"
-                  value={newContactName}
-                  onChange={(e) => setNewContactName(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
-                />
-                <input
-                  type="tel"
-                  placeholder="Phone Number"
-                  value={newContactPhone}
-                  onChange={(e) => setNewContactPhone(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAddContact}
-                    disabled={!newContactName.trim() || !newContactPhone.trim()}
-                    className="flex-1 py-2 bg-pink-500 text-white rounded-lg font-semibold hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Add Contact
-                  </button>
-                  <button
+            <label className="block text-lg font-medium text-gray-700">Emergency Contacts</label>
+            <Dialog open={showAddContact} onOpenChange={setShowAddContact}>
+              <DialogTrigger asChild>
+                <button className="w-8 h-8 bg-pink-500 text-white rounded-full flex items-center justify-center hover:bg-pink-600 transition-colors">
+                  <Plus className="w-5 h-5" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">Add Emergency Contact</DialogTitle>
+                  <DialogDescription>
+                    Add a new emergency contact. They will be notified if you need help.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 ">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="Contact Name"
+                      value={newContactName}
+                      onChange={(e) => setNewContactName(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="(123) 456-7890"
+                      value={newContactPhone}
+                      onChange={(e) => setNewContactPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
                     onClick={() => {
                       setShowAddContact(false);
                       setNewContactName("");
                       setNewContactPhone("");
                     }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
                   >
                     Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                  </Button>
+                  <Button
+                    onClick={handleAddContact}
+                    disabled={!newContactName.trim() || !newContactPhone.trim()}
+                    className="bg-pink-500 hover:bg-pink-600"
+                  >
+                    Add Contact
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
 
           {/* Contact List */}
           <div className="space-y-3">
@@ -207,9 +226,9 @@ export default function SettingsPage() {
         </div>
 
         {/* Save Changes Button */}
-        <button className="w-full py-4 bg-gray-300 text-gray-600 rounded-2xl font-semibold hover:bg-gray-400 transition-colors">
+        <Button className="w-full py-4 bg-gray-300 text-gray-600 hover:bg-gray-400">
           Save Changes
-        </button>
+        </Button>
       </main>
     </div>
   );
