@@ -131,31 +131,91 @@ export default function TripPage() {
         // Fetch routes for all transport modes
         const modes = ['walking', 'driving', 'public'];
 
-        const calculateSafetyScore = (mode: string, duration: number) => {
-          const baseScores: { [key: string]: number } = {
-            walking: 67,
-            driving: 94,
-            public: 42,
-          };
-          return baseScores[mode] || 50;
-        };
+        // Get battery status if available
+        let batteryPercent = 80;
+        let isCharging = false;
+        if ('getBattery' in navigator) {
+          try {
+            const battery = await (navigator as any).getBattery();
+            batteryPercent = Math.round(battery.level * 100);
+            isCharging = battery.charging;
+          } catch (e) {
+            console.log('Battery API not available');
+          }
+        }
 
         // Fetch all routes for all modes
         const results = await Promise.all(
           modes.map(async (mode) => {
-            const response = await fetch("/api/route", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                startLat,
-                startLon,
-                endLat,
-                endLon,
-                transportMode: mode,
-              }),
-            });
-            const data = await response.json();
-            return { mode, data: response.ok ? data : null };
+            try {
+              // Fetch route data
+              const routeResponse = await fetch("/api/route", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  startLat,
+                  startLon,
+                  endLat,
+                  endLon,
+                  transportMode: mode,
+                }),
+              });
+              const routeData = await routeResponse.json();
+
+              // Extract waypoints from the route for detailed safety analysis
+              let waypoints: Array<{lat: number, lon: number}> = [];
+              if (routeResponse.ok && routeData.routes && routeData.routes[0]?.legs) {
+                const leg = routeData.routes[0].legs[0];
+                if (leg.steps && leg.steps.length > 0) {
+                  // Sample waypoints from route steps (every 2-3 steps to avoid too many API calls)
+                  const stepInterval = Math.max(1, Math.floor(leg.steps.length / 5)); // Max 5 waypoints
+                  leg.steps.forEach((step: any, idx: number) => {
+                    if (idx % stepInterval === 0 && step.end_location) {
+                      waypoints.push({
+                        lat: step.end_location.lat,
+                        lon: step.end_location.lng
+                      });
+                    }
+                  });
+                }
+              }
+
+              // Fetch safety score from backend with route waypoints for Databricks analysis
+              let safetyScore = 50; // default
+              try {
+                const safetyResponse = await fetch("http://localhost:3001/api/plan/route-safety-score", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    startLat,
+                    startLon,
+                    endLat,
+                    endLon,
+                    waypoints, // Include route waypoints for comprehensive analysis
+                    battery_percent: batteryPercent,
+                    is_charging: isCharging,
+                    transport_mode: mode, // Pass the transport mode
+                  }),
+                });
+                
+                if (safetyResponse.ok) {
+                  const safetyData = await safetyResponse.json();
+                  safetyScore = safetyData.score;
+                  console.log(`Safety score for ${mode}: ${safetyScore} (analyzed ${safetyData.route_segments_analyzed || 0} segments)`);
+                }
+              } catch (err) {
+                console.warn('Failed to fetch safety score, using default:', err);
+              }
+
+              return { 
+                mode, 
+                data: routeResponse.ok ? routeData : null,
+                safetyScore 
+              };
+            } catch (err) {
+              console.error(`Error fetching ${mode} route:`, err);
+              return { mode, data: null, safetyScore: 50 };
+            }
           })
         );
 
@@ -176,7 +236,7 @@ export default function TripPage() {
               icon: result.mode === 'walking' ? User : result.mode === 'driving' ? Car : Bus,
               time: `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`,
               duration: `${durationMinutes} min`,
-              safetyScore: calculateSafetyScore(result.mode, route.duration),
+              safetyScore: result.safetyScore,
               altIndex: result.mode === 'walking' ? idx + 1 : undefined,
               route,
             });
@@ -389,11 +449,20 @@ export default function TripPage() {
                     <div className="text-right">
                       <p className="text-gray-600 text-sm">Safety Score</p>
                       <p className={`text-2xl font-semibold ${
-                        option.safetyScore >= 80 ? 'text-pink-500' : 
-                        option.safetyScore >= 60 ? 'text-orange-500' : 
-                        'text-red-500'
+                        option.safetyScore >= 90 ? 'text-green-600' :      // Excellent
+                        option.safetyScore >= 70 ? 'text-pink-500' :       // Good
+                        option.safetyScore >= 50 ? 'text-orange-500' :     // Moderate
+                        option.safetyScore >= 30 ? 'text-red-500' :        // Poor
+                        'text-red-700'                                      // Dangerous
                       }`}>
                         {option.safetyScore}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {option.safetyScore >= 90 ? 'Excellent' :
+                         option.safetyScore >= 70 ? 'Good' :
+                         option.safetyScore >= 50 ? 'Moderate' :
+                         option.safetyScore >= 30 ? 'Poor' :
+                         'Dangerous'}
                       </p>
                       <button
                         onClick={() => window.open(mapsUrl, '_blank')}
