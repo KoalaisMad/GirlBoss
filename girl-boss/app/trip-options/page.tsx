@@ -457,13 +457,6 @@ export default function TripPage() {
                       }`}>
                         {option.safetyScore}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {option.safetyScore >= 90 ? 'Excellent' :
-                         option.safetyScore >= 70 ? 'Good' :
-                         option.safetyScore >= 50 ? 'Moderate' :
-                         option.safetyScore >= 30 ? 'Poor' :
-                         'Dangerous'}
-                      </p>
                       <button
                         onClick={() => window.open(mapsUrl, '_blank')}
                         className="mt-2 bg-pink-100 hover:bg-pink-200 text-pink-700 px-3 py-1 rounded-lg text-xs font-medium transition-colors"
