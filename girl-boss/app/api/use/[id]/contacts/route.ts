@@ -1,3 +1,4 @@
+import { NextResponse as Response } from "next/server";
 import { connectToMongoDB } from "@/backend/src/config/db";
 import User from "@/models/User";
 

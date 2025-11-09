@@ -24,7 +24,6 @@ export interface User {
 export interface EmergencyContact {
   name: string;
   phone: string;
-  relationship: string;
 }
 
 export const createUser = async (userData: Partial<User>): Promise<User> => {
