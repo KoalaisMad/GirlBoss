@@ -38,5 +38,5 @@ It blends modern design, geospatial data, and AI-driven analytics into one seaml
 ### 1. Clone the repository
 ```bash
 git clone https://github.com/KoalaisMad/TAMUDatathon25
-cd girlboss
+cd girl-boss
 npm install
