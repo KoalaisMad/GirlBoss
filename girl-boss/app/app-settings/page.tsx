@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Navigation from "../components/Navigation";
 
 interface EmergencyContact {
@@ -19,6 +20,7 @@ interface EmergencyContact {
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContactName, setNewContactName] = useState("");
@@ -105,8 +107,10 @@ export default function SettingsPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
           <input
             type="text"
-            defaultValue="Your Name"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+            value={session?.user?.name || ""}
+            placeholder="Your Name"
+            readOnly
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
           />
         </div>
 
@@ -115,8 +119,10 @@ export default function SettingsPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
           <input
             type="email"
-            defaultValue="yourname@tamu.edu"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent"
+            value={session?.user?.email || ""}
+            placeholder="your.email@example.com"
+            readOnly
+            className="w-full px-4 py-3 rounded-xl border border-gray-300 bg-gray-50 text-gray-600 cursor-not-allowed"
           />
         </div>
 
