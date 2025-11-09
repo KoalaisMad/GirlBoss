@@ -17,20 +17,40 @@ export const getChatbotResponse = async (
   context?: any
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     
     // tell the AI what kind of assistant it should be
-    const systemPrompt = `You are a helpful safety assistant for GirlBoss, 
-    an app that helps women travel safely. Provide concise, empathetic, 
-    and actionable safety advice. Keep responses under 150 words.`;
+    const systemPrompt = `You are a helpful safety assistant for GirlBoss, an app that helps women travel safely. 
+
+Your capabilities:
+- Provide personalized safety advice based on location and time of day
+- Suggest well-lit routes and safe spaces
+- Give tips for different transport modes (walking, driving, public transit)
+- Help users identify and avoid potentially unsafe situations
+- Provide emergency guidance and self-defense tips
+- Answer questions about travel safety, nighttime safety, and situational awareness
+
+Keep responses:
+- Concise (under 150 words)
+- Empathetic and supportive
+- Actionable with specific steps
+- Focused on personal safety`;
     
     // add any context we have about the user
+    const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    
     const contextInfo = context ? `
-    User context:
-    - Current location: ${context.location || 'Unknown'}
-    - Time: ${context.time || 'Unknown'}
-    - Previous trips: ${context.tripCount || 0}
-    ` : '';
+Current Context:
+- Location: ${context.location || 'Unknown'}
+- Coordinates: ${context.lat && context.lon ? `${context.lat}, ${context.lon}` : 'Not available'}
+- Time: ${currentTime} on ${currentDate}
+- Previous trips: ${context.tripCount || 0}
+${context.nearbySpaces ? `- Nearby safe spaces: ${context.nearbySpaces}` : ''}
+    ` : `
+Current Context:
+- Time: ${currentTime} on ${currentDate}
+`;
     
     const fullPrompt = `${systemPrompt}\n\n${contextInfo}\n\nUser: ${message}\n\nAssistant:`;
     

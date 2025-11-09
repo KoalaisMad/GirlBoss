@@ -95,19 +95,19 @@ export default function VoiceAssistantPage() {
     setStatus("Processing your request...");
 
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chatbot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ message: text }),
       });
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
         throw new Error(data.error || "Failed to get response");
       }
 
-      const replyText = data.text;
+      const replyText = data.message;
       console.log("📝 AI Response:", replyText);
 
       // Use browser's built-in speech synthesis

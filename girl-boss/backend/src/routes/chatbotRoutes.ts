@@ -1,7 +1,8 @@
 /**
  * CHATBOT ROUTES
  * 
- * Endpoints for text-based chat interactions.
+ * Endpoints for AI-powered safety chatbot interactions.
+ * All routes are under /api/chatbot
  */
 
 import express, { Request, Response } from 'express';
@@ -12,26 +13,64 @@ import { buildUserContext } from '../mcp/contextBuilder';
 
 const router = express.Router();
 
-// POST /api/chat - General chat
+// POST /api/chatbot - General chat with safety features
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { message, userId } = req.body;
+    const { message, userId, location, lat, lon } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    console.log('💬 Chat message:', message);
+    console.log('📍 Location:', location, lat, lon);
+
     // Build user context
-    let context = undefined;
+    let context: any = {
+      location: location || 'Unknown',
+      lat,
+      lon,
+    };
+    
     if (userId) {
-      context = await buildUserContext(userId);
+      const userContext = await buildUserContext(userId);
+      context = { ...context, ...userContext };
+    }
+
+    // Check if user is asking about safe spaces
+    const lowerMessage = message.toLowerCase();
+    const askingAboutSafeSpaces = 
+      lowerMessage.includes('safe space') || 
+      lowerMessage.includes('safe place') ||
+      lowerMessage.includes('where can i go') ||
+      lowerMessage.includes('nearby') ||
+      lowerMessage.includes('find a place');
+
+    // If asking about safe spaces and we have location, get nearby safe spaces
+    if (askingAboutSafeSpaces && lat && lon) {
+      try {
+        const safeSpaces = await getOpenSafeSpaces(
+          parseFloat(lat),
+          parseFloat(lon),
+          1000 // 1km radius
+        );
+        
+        if (safeSpaces.length > 0) {
+          const topSpaces = safeSpaces.slice(0, 3).map(s => s.name).join(', ');
+          context.nearbySpaces = topSpaces;
+          console.log('🏢 Found nearby safe spaces:', topSpaces);
+        }
+      } catch (err) {
+        console.error('Error fetching safe spaces:', err);
+      }
     }
 
     const response = await getChatbotResponse(message, context);
 
     res.json({
       message: response,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      hasSafeSpaces: askingAboutSafeSpaces && context.nearbySpaces
     });
   } catch (error: any) {
     console.error('Chat error:', error);
@@ -39,7 +78,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/chat/safe-spaces - Find safe spaces nearby
+// GET /api/chatbot/safe-spaces - Find safe spaces nearby
 router.get('/safe-spaces', async (req: Request, res: Response) => {
   try {
     const { lat, lon, radius } = req.query;
@@ -65,7 +104,7 @@ router.get('/safe-spaces', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/chat/place-history - Get safety history for a location
+// GET /api/chatbot/place-history - Get safety history for a location
 router.get('/place-history', async (req: Request, res: Response) => {
   try {
     const { lat, lon, radius } = req.query;
@@ -87,7 +126,7 @@ router.get('/place-history', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/chat/safety-advice - Get personalized safety advice
+// POST /api/chatbot/safety-advice - Get personalized safety advice
 router.post('/safety-advice', async (req: Request, res: Response) => {
   try {
     const { location, timeOfDay, transportMode } = req.body;

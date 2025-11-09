@@ -78,56 +78,36 @@ export const planRoute = async (request: RouteRequest): Promise<RouteResponse> =
 export interface ChatRequest {
   message: string;
   userId?: string;
+  location?: string;
+  lat?: number;
+  lon?: number;
 }
 
 export interface ChatResponse {
   message: string;
   timestamp: string;
+  hasSafeSpaces?: boolean;
 }
 
-// send a message and get AI response
+// send a message and get AI response from safety chatbot
 export const sendChatMessage = async (request: ChatRequest): Promise<ChatResponse> => {
-  return apiRequest<ChatResponse>('/api/chat', {
+  // Use Next.js proxy route instead of direct backend call
+  const response = await fetch('/api/chatbot', {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
   });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Request failed with status ${response.status}`);
+  }
+
+  return await response.json();
 };
 
-export interface SafeSpace {
-  name: string;
-  type: 'police' | 'hospital' | 'fire_station' | 'cafe';
-  distance: number;
-  coordinates: { lat: number; lon: number };
-  isOpen: boolean;
-}
-
-// find safe places nearby - like police stations and stuff
-export const findSafeSpaces = async (
-  lat: number,
-  lon: number,
-  radius?: number
-): Promise<{ spaces: SafeSpace[]; count: number }> => {
-  const params = new URLSearchParams({
-    lat: lat.toString(),
-    lon: lon.toString(),
-    ...(radius && { radius: radius.toString() }),
-  });
-
-  return apiRequest<{ spaces: SafeSpace[]; count: number }>(
-    `/api/chat/safe-spaces?${params}`
-  );
-};
-
-export const getSafetyAdvice = async (
-  location: string,
-  timeOfDay?: string,
-  transportMode?: string
-): Promise<{ advice: string }> => {
-  return apiRequest<{ advice: string }>('/api/chat/safety-advice', {
-    method: 'POST',
-    body: JSON.stringify({ location, timeOfDay, transportMode }),
-  });
-};
+// NOTE: Safe spaces and safety advice are now handled directly by the chatbot
+// Just ask the AI in natural language (e.g., "find safe spaces near me")
 
 // ==========================================
 // VOICE ASSISTANT API
@@ -221,41 +201,6 @@ export const addEmergencyContact = async (
     method: 'POST',
     body: JSON.stringify(contact),
   });
-};
-
-// ==========================================
-// EMERGENCY API
-// ==========================================
-
-export interface EmergencyRequest {
-  userId: string;
-  tripId?: string;
-  lat: number;
-  lon: number;
-  message?: string;
-}
-
-export const triggerEmergency = async (request: EmergencyRequest): Promise<{
-  success: boolean;
-  notifications: any;
-  safeSpaces: SafeSpace[];
-}> => {
-  return apiRequest('/api/emergency/trigger', {
-    method: 'POST',
-    body: JSON.stringify(request),
-  });
-};
-
-export const getEmergencySafeSpaces = async (
-  lat: number,
-  lon: number
-): Promise<{ spaces: SafeSpace[]; emergencyMode: boolean }> => {
-  const params = new URLSearchParams({
-    lat: lat.toString(),
-    lon: lon.toString(),
-  });
-
-  return apiRequest(`/api/emergency/safe-spaces?${params}`);
 };
 
 // ==========================================

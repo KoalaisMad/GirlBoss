@@ -1,12 +1,12 @@
-// Chat page - basically just talks to the AI backend lol
-// kinda cool how it works tho
+// Chat page - AI Safety Assistant powered by Google Gemini
 
 "use client";
 
-import { useState } from "react";
-import { Menu, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, Send, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Navigation from "../components/Navigation";
 import { sendChatMessage } from "@/lib/api";
 
@@ -19,20 +19,61 @@ interface Message {
 
 export default function ChatbotPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! How can I help you stay safe today?",
+      text: "Hello! I'm your personal safety assistant. I can help with:\n\n• Safety advice based on your location and time\n• Finding safe spaces nearby\n• Travel safety tips for walking, driving, or public transit\n• Emergency guidance\n\nHow can I help you stay safe today?",
       sender: "bot",
       timestamp: new Date(),
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lon: number;
+    name: string;
+  } | null>(null);
 
-  // this function sends messages to the backend and gets responses
-  // took me a while to figure out the async stuff lol
+  // Get user's location when page loads
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            name: "Current Location",
+          };
+
+          // Try to get location name from reverse geocoding
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.lat}&lon=${location.lon}`
+            );
+            const data = await response.json();
+            if (data.address) {
+              const city = data.address.city || data.address.town || data.address.village;
+              const state = data.address.state;
+              location.name = city && state ? `${city}, ${state}` : "Current Location";
+            }
+          } catch (err) {
+            console.log("Could not get location name:", err);
+          }
+
+          setUserLocation(location);
+          console.log("📍 User location:", location);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+  }, []);
+
+  // Send messages to the AI with location context
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
 
@@ -49,8 +90,13 @@ export default function ChatbotPage() {
     setIsLoading(true);
 
     try {
-      // this hits our backend API
-      const response = await sendChatMessage({ message: inputMessage });
+      // Send message with location context
+      const response = await sendChatMessage({ 
+        message: inputMessage,
+        location: userLocation?.name,
+        lat: userLocation?.lat,
+        lon: userLocation?.lon,
+      });
       
       // then add the bot's response
       const botResponse: Message = {
@@ -101,11 +147,12 @@ export default function ChatbotPage() {
       {/* Main Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-8 flex flex-col pb-4">
         <h1 className="text-4xl font-semibold pt-12 mb-2 text-center">
-          <span className="text-gray-900">Chat</span>
+          <span className="text-gray-900">Safety Assistant</span>
         </h1>
-        <p className="text-center text-pink-400 mb-6">
-          Tips and advice tailored to you
+        <p className="text-center text-pink-400 mb-4">
+          AI-powered safety advice
         </p>
+
 
         {/* Messages Container */}
         <div className="flex-1 overflow-y-auto mb-6 space-y-4">
@@ -121,7 +168,7 @@ export default function ChatbotPage() {
                     : "bg-gray-200 text-gray-900 rounded-bl-sm"
                 }`}
               >
-                <p className="text-sm">{message.text}</p>
+                <p className="text-sm whitespace-pre-line">{message.text}</p>
                 <p className={`text-xs mt-1 ${message.sender === "user" ? "text-pink-100" : "text-gray-500"}`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>

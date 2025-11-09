@@ -43,7 +43,7 @@ app.get('/health', (req: Request, res: Response) => {
 // all the API routes
 app.use('/api/plan', planningRoutes);
 app.use('/api/yap', yappingRoutes);
-app.use('/api/chat', chatbotRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/emergency', emergencyRoutes);
 app.use('/api/trips', tripRoutes);
