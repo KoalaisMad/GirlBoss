@@ -1,11 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Menu, X, Plus } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { X, Plus } from "lucide-react";
 import { useSession } from "next-auth/react";
-import Navigation from "../components/Navigation";
+import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -55,11 +53,9 @@ const decorate = (list: Contact[]): UIContact[] =>
 
 
 export default function SettingsPage() {
-  const router = useRouter();
   const { data: session } = useSession();
 
 
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContactName, setNewContactName] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
@@ -156,21 +152,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-        <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
-          <Image src="/girlboss.png" alt="GirlBoss Logo" width={150} height={150} className="rounded-lg" />
-        </button>
-        <button
-          onClick={() => setIsNavOpen(true)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6 text-gray-700" />
-        </button>
-      </header>
+      <Header />
 
 
       {/* Main Content */}

@@ -1,16 +1,13 @@
 "use client";
 
-import { Menu, Shield, MapPin, Users } from "lucide-react";
-import Image from "next/image";
+import { Shield, MapPin, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import NavigationMenu from "./components/Navigation";
+import Header from "@/components/Header";
 
 export default function LandingPage() {
   const router = useRouter();
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const { data: session, status } = useSession();
 
   const features = [
@@ -33,27 +30,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen ">
-      <NavigationMenu isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-      {/* Header */}
-      <header className="flex items-center justify-between px-8 lg:px-24 py-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
-            <Image
-              src="/girlboss.png"
-              alt="GirlBoss Logo"
-              width={150}
-              height={150}
-              className="rounded-lg"
-            />
-          </button>
-        </div>
-        <button 
-          onClick={() => setIsNavOpen(true)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6 text-gray-700" />
-        </button>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="px-4 sm:px-6 py-12 sm:py-20 max-w-6xl mx-auto">
@@ -88,7 +65,7 @@ export default function LandingPage() {
             <h2 className="text-2xl font-semibold mb-4">
             Latest technologies are used to maximize user saftey
             </h2>
-            <p className="text-gray-600 text-sm  mx-auto">
+            <p className="text-gray-600 text-sm md:text-base mx-auto">
               More than just navigation – your personal safety companion for every journey
             </p>
           </div>

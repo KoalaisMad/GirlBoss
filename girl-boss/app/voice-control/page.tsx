@@ -5,10 +5,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Menu, Mic, Phone } from "lucide-react";
-import Image from "next/image";
+import { Mic, Phone } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Navigation from "../components/Navigation";
+import Header from "@/components/Header";
 
 // Define types for speech recognition
 interface SpeechRecognitionEvent extends Event {
@@ -45,7 +44,6 @@ declare global {
 
 export default function VoiceAssistantPage() {
   const router = useRouter();
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -178,26 +176,7 @@ export default function VoiceAssistantPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-      
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4">
-        <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
-          <Image
-            src="/girlboss.png"
-            alt="GirlBoss Logo"
-            width={150}
-            height={150}
-            className="rounded-lg"
-          />
-        </button>
-        <button 
-          onClick={() => setIsNavOpen(true)}
-          className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center pt-12 px-6">

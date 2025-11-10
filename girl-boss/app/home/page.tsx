@@ -5,7 +5,6 @@
 "use client";
 
 import {
-  Menu,
   Search,
   Navigation,
   Car,
@@ -16,7 +15,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import NavigationMenu from "../components/Navigation";
+import Header from "@/components/Header";
 import { getUserByEmail } from "@/lib/contact";
 
 interface Location {
@@ -95,7 +93,6 @@ export default function Home() {
     lon: number;
   } | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Emergency alert states
@@ -515,31 +512,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white">
-      <NavigationMenu isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-
-      {/* Header */}
-      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/")}
-            className="cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <Image
-              src="/girlboss.png"
-              alt="GirlBoss Logo"
-              width={150}
-              height={150}
-              className="rounded-lg"
-            />
-          </button>
-        </div>
-        <button
-          onClick={() => setIsNavOpen(true)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6 text-gray-700" />
-        </button>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="px-8 pt-12 pb-6 max-w-2xl mx-auto">

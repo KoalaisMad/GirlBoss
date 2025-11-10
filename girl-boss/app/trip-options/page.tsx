@@ -5,10 +5,9 @@
 "use client";
 
 import { useEffect, useState, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Menu, User, Car, Bus } from "lucide-react";
-import Image from "next/image";
-import Navigation from "../components/Navigation";
+import { useSearchParams } from "next/navigation";
+import { User, Car, Bus } from "lucide-react";
+import Header from "@/components/Header";
 
 interface RouteLeg {
   steps?: Array<{
@@ -133,11 +132,9 @@ function useLoadGoogleMaps() {
 }
 
 function TripPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [tripOptions, setTripOptions] = useState<TripOption[]>([]);
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<unknown>(null);
   const [mapInitError, setMapInitError] = useState<string | null>(null);
@@ -435,26 +432,7 @@ function TripPageContent() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-      
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-        <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
-          <Image
-            src="/girlboss.png"
-            alt="GirlBoss Logo"
-            width={150}
-            height={150}
-            className="rounded-lg"
-          />
-        </button>
-        <button 
-          onClick={() => setIsNavOpen(true)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6 text-gray-700" />
-        </button>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-8 pt-12 py-8">

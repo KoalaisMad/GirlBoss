@@ -3,10 +3,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Menu, Send } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import Navigation from "../components/Navigation";
+import { Send } from "lucide-react";
+import Header from "@/components/Header";
 import { sendChatMessage } from "@/lib/api";
 
 interface Message {
@@ -17,8 +15,6 @@ interface Message {
 }
 
 export default function ChatbotPage() {
-  const router = useRouter();
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -121,26 +117,7 @@ export default function ChatbotPage() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Navigation isOpen={isNavOpen} onClose={() => setIsNavOpen(false)} />
-      
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-        <button onClick={() => router.push('/')} className="cursor-pointer hover:opacity-80 transition-opacity">
-          <Image
-            src="/girlboss.png"
-            alt="GirlBoss Logo"
-            width={150}
-            height={150}
-            className="rounded-lg"
-          />
-        </button>
-        <button 
-          onClick={() => setIsNavOpen(true)}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <Menu className="w-6 h-6 text-gray-700" />
-        </button>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-8 flex flex-col pb-4">
