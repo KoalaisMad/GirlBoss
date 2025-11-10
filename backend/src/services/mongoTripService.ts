@@ -4,7 +4,7 @@
  * Stores and retrieves trip history, routes, and safety scores.
  */
 
-import { getDB } from '../config/db';
+import { getDB, connectToMongoDB } from '../config/db';
 import { ObjectId } from 'mongodb';
 
 export interface Trip {
@@ -34,6 +34,7 @@ export interface Trip {
 }
 
 export const createTrip = async (tripData: Omit<Trip, '_id' | 'createdAt'>): Promise<Trip> => {
+  await connectToMongoDB();
   const db = getDB();
   const trips = db.collection<Trip>('trips');
   
@@ -47,12 +48,14 @@ export const createTrip = async (tripData: Omit<Trip, '_id' | 'createdAt'>): Pro
 };
 
 export const getTripById = async (tripId: string): Promise<Trip | null> => {
+  await connectToMongoDB();
   const db = getDB();
   const trips = db.collection<Trip>('trips');
   return trips.findOne({ _id: new ObjectId(tripId) });
 };
 
 export const getUserTrips = async (userId: string, limit: number = 10): Promise<Trip[]> => {
+  await connectToMongoDB();
   const db = getDB();
   const trips = db.collection<Trip>('trips');
   
@@ -64,6 +67,7 @@ export const getUserTrips = async (userId: string, limit: number = 10): Promise<
 };
 
 export const getTripsByUserEmail = async (email: string, limit: number = 3): Promise<Trip[]> => {
+  await connectToMongoDB();
   const db = getDB();
   const users = db.collection('users');
   const trips = db.collection<Trip>('trips');

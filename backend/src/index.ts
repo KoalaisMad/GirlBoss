@@ -13,8 +13,8 @@ import userRoutes from './routes/userRoutes';
 import emergencyRoutes from './routes/emergencyRoutes';
 import tripRoutes from './routes/tripRoutes';
 
-// load env vars from .env file in parent directory
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// load env vars from .env file in backend directory
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const app: Express = express();
 const PORT = process.env.PORT || 4000;

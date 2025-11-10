@@ -4,7 +4,7 @@
  * Manages user profiles, preferences, and emergency contacts in MongoDB.
  */
 
-import { getDB } from '../config/db';
+import { getDB, connectToMongoDB } from '../config/db';
 import { ObjectId } from 'mongodb';
 
 export interface User {
@@ -27,6 +27,7 @@ export interface EmergencyContact {
 }
 
 export const createUser = async (userData: Partial<User>): Promise<User> => {
+  await connectToMongoDB();
   const db = getDB();
   const users = db.collection<User>('users');
   
@@ -48,12 +49,14 @@ export const createUser = async (userData: Partial<User>): Promise<User> => {
 };
 
 export const getUserById = async (userId: string): Promise<User | null> => {
+  await connectToMongoDB();
   const db = getDB();
   const users = db.collection<User>('users');
   return users.findOne({ _id: new ObjectId(userId) });
 };
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
+  await connectToMongoDB();
   const db = getDB();
   const users = db.collection<User>('users');
   // Normalize email for consistent lookup
@@ -62,6 +65,7 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
 };
 
 export const updateUser = async (userId: string, updates: Partial<User>): Promise<User | null> => {
+  await connectToMongoDB();
   const db = getDB();
   const users = db.collection<User>('users');
   
@@ -82,6 +86,7 @@ export const addEmergencyContact = async (
   userId: string, 
   contact: EmergencyContact
 ): Promise<User | null> => {
+  await connectToMongoDB();
   const db = getDB();
   const users = db.collection<User>('users');
   
