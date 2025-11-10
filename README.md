@@ -4,6 +4,8 @@
 
 It blends modern design, geospatial data, and AI-driven analytics into one seamless experience.
 
+Second Place for Databricks and Best use of Snowflake at TAMU Datathon 25
+
 ---
 
 ## ✨ Features
@@ -40,3 +42,9 @@ It blends modern design, geospatial data, and AI-driven analytics into one seaml
 git clone https://github.com/KoalaisMad/TAMUDatathon25
 cd girl-boss
 npm install
+npm run dev
+make a new terminal
+cd girl-boss
+cd backend
+npm install
+npm run dev
