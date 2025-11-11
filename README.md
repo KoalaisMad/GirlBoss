@@ -31,7 +31,7 @@ Second Place for Databricks and Best use of Snowflake at TAMU Datathon 25
 | AI Integration | Google Gemini API |
 | Data Analytics | Databricks, Snowflake |
 | Maps | Google Maps API |
-| Deployment | Vercel |
+| Deployment | Vercel, Godaddy |
 
 ---
 
