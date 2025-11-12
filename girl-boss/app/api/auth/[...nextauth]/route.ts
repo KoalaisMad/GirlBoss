@@ -10,7 +10,7 @@ interface ExtendedSession extends Session {
   };
 }
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+const BACKEND_URL = process.env.BACKEND_URL || 'https://api.girlbosssafety.us';
 
 export const authOptions = {
   providers: [

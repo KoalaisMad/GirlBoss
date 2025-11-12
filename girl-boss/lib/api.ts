@@ -2,7 +2,7 @@
 // basically just a bunch of functions that call our Express server
 // i got tired of writing fetch() everywhere so i made this lol
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.girlbosssafety.us';
 
 // this is like a wrapper function so we don't have to repeat ourselves
 // handles errors and stuff too

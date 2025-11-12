@@ -216,7 +216,7 @@ function TripPageContent() {
               // Fetch safety score from backend with route waypoints for Databricks analysis
               let safetyScore = 50; // default
               try {
-                const safetyResponse = await fetch("http://localhost:4000/api/plan/route-safety-score", {
+                const safetyResponse = await fetch("https://api.girlbosssafety.us/api/plan/route-safety-score", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
