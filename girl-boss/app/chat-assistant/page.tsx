@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 import Header from "@/components/Header";
 import { sendChatMessage } from "@/lib/api";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: number;
@@ -18,7 +19,7 @@ export default function ChatbotPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! I'm your personal safety assistant. I can help with:\n\n• Safety advice based on your location and time\n• Finding safe spaces nearby\n• Travel safety tips for walking, driving, or public transit\n• Emergency guidance\n\nHow can I help you stay safe today?",
+      text: "Hello! I'm your personal safety assistant. I can help with:\n\n• **Safety advice** based on your location and time  \n• **Finding safe spaces** nearby  \n• **Travel safety tips** for walking, driving, or public transit  \n• **Emergency guidance**\n\nHow can I help you stay safe today?",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -139,7 +140,7 @@ export default function ChatbotPage() {
         </div>
 
         {/* Messages Container - Scrollable with bottom padding for fixed input */}
-        <div className="space-y-4 pb-0">
+        <div className="space-y-4 pb-20 lg:pb-24">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -152,7 +153,13 @@ export default function ChatbotPage() {
                     : "bg-gray-200 text-gray-900 rounded-bl-sm"
                 }`}
               >
-                <p className="text-sm whitespace-pre-line">{message.text}</p>
+                {message.sender === "bot" ? (
+                  <div className="text-sm prose prose-sm max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0">
+                    <ReactMarkdown>{message.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-line">{message.text}</p>
+                )}
                 <p className={`text-xs mt-1 ${message.sender === "user" ? "text-pink-100" : "text-gray-500"}`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
