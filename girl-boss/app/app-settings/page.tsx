@@ -165,11 +165,11 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-semibold mb-2 text-center">
           <span className="text-gray-900">Settings</span>
         </h1>
-        <p className="text-center text-pink-400 mb-8">Manage your account</p>
+        <p className="text-center text-pink-400 mb-4">Manage your account</p>
 
 
         {/* Name Field */}
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block font-medium text-gray-700 mb-2">Name</label>
           <input
             type="text"
@@ -182,7 +182,7 @@ export default function SettingsPage() {
 
 
         {/* Email Field */}
-        <div className="mb-6">
+        <div className="mb-8">
           <label className="block font-medium text-gray-700 mb-2">Email</label>
           <input
             type="email"
